@@ -7,21 +7,25 @@ using Umbraco.Cms.Core.Models;
 using Umbraco.Cms.Core.Services;
 using Umbraco.Cms.Core.Strings;
 using UmbConstants = global::Umbraco.Cms.Core.Constants;
+using UmbTemplateStatus = global::Umbraco.Cms.Core.Services.OperationStatus.TemplateOperationStatus;
 
 namespace Consid.Umbraco.CodeFirst.Sync;
 
 internal sealed class ContentTypeSyncEngine
 {
     private readonly IContentTypeService _contentTypeService;
+    private readonly ITemplateService _templateService;
     private readonly IShortStringHelper _shortStringHelper;
     private readonly ILogger<ContentTypeSyncEngine> _logger;
 
     public ContentTypeSyncEngine(
         IContentTypeService contentTypeService,
+        ITemplateService templateService,
         IShortStringHelper shortStringHelper,
         ILogger<ContentTypeSyncEngine> logger)
     {
         _contentTypeService = contentTypeService;
+        _templateService = templateService;
         _shortStringHelper = shortStringHelper;
         _logger = logger;
     }
@@ -140,6 +144,7 @@ internal sealed class ContentTypeSyncEngine
         };
 
         ApplyProperties(contentType, def, dataTypeByKey);
+        await ApplyTemplateAsync(contentType, def);
 
         var result = await _contentTypeService.CreateAsync(contentType, UmbConstants.Security.SuperUserKey);
         if (result.Success)
@@ -167,12 +172,48 @@ internal sealed class ContentTypeSyncEngine
 
         existing.PropertyGroups.Clear();
         ApplyProperties(existing, def, dataTypeByKey);
+        await ApplyTemplateAsync(existing, def);
 
         var result = await _contentTypeService.UpdateAsync(existing, UmbConstants.Security.SuperUserKey);
         if (result.Success)
             _logger.LogInformation("Updated document type '{Alias}' ({Key}).", def.Alias, def.Key);
         else
             _logger.LogError("Failed to update document type '{Alias}': {Status}.", def.Alias, result.Result);
+    }
+
+    private async Task ApplyTemplateAsync(IContentType contentType, DocumentTypeDefinition def)
+    {
+        if (def.DefaultTemplate is null)
+        {
+            contentType.AllowedTemplates = [];
+            contentType.DefaultTemplateId = 0;
+            return;
+        }
+
+        var template = await _templateService.GetAsync(def.DefaultTemplate);
+
+        if (template is null)
+        {
+            var result = await _templateService.CreateAsync(
+                def.DefaultTemplate,
+                def.DefaultTemplate,
+                content: null,
+                UmbConstants.Security.SuperUserKey);
+
+            if (result.Success)
+            {
+                template = result.Result;
+                _logger.LogInformation("Created template '{Alias}'.", def.DefaultTemplate);
+            }
+            else
+            {
+                _logger.LogError("Failed to create template '{Alias}': {Status}.", def.DefaultTemplate, result.Status);
+                return;
+            }
+        }
+
+        contentType.AllowedTemplates = [template];
+        contentType.DefaultTemplateId = template.Id;
     }
 
     private void ApplyProperties(IContentType contentType, DocumentTypeDefinition def, Dictionary<Guid, IDataType> dataTypeByKey)

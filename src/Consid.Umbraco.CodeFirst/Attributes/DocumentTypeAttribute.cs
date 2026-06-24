@@ -10,7 +10,8 @@ public sealed class DocumentTypeAttribute : Attribute
         string? Icon = null,
         string? Description = null,
         bool AllowedAtRoot = false,
-        string? Folder = null)
+        string? Folder = null,
+        string? DefaultTemplate = null)
     {
         Key = System.Guid.Parse(Guid);
         this.Name = Name;
@@ -19,6 +20,7 @@ public sealed class DocumentTypeAttribute : Attribute
         this.Description = Description;
         this.AllowedAtRoot = AllowedAtRoot;
         this.Folder = Folder;
+        this.DefaultTemplate = DefaultTemplate;
     }
 
     public System.Guid Key { get; }
@@ -29,4 +31,6 @@ public sealed class DocumentTypeAttribute : Attribute
     public bool AllowedAtRoot { get; }
     /// <summary>Backoffice folder path, e.g. "Pages" or "Pages/Articles".</summary>
     public string? Folder { get; }
+    /// <summary>Template alias to link as the default template, e.g. "startPage". Null means no template.</summary>
+    public string? DefaultTemplate { get; }
 }

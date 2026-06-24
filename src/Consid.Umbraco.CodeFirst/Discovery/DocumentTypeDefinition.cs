@@ -11,6 +11,7 @@ internal sealed record DocumentTypeDefinition(
     string? Description,
     bool AllowedAtRoot,
     string? Folder,
+    string? DefaultTemplate,
     IReadOnlyList<Type> AllowedChildTypes,
     IReadOnlyList<PropertyDefinition> Properties);
 
