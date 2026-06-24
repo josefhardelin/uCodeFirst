@@ -9,7 +9,8 @@ public sealed class DocumentTypeAttribute : Attribute
         string? Alias = null,
         string? Icon = null,
         string? Description = null,
-        bool AllowedAtRoot = false)
+        bool AllowedAtRoot = false,
+        string? Folder = null)
     {
         Key = System.Guid.Parse(Guid);
         this.Name = Name;
@@ -17,6 +18,7 @@ public sealed class DocumentTypeAttribute : Attribute
         this.Icon = Icon;
         this.Description = Description;
         this.AllowedAtRoot = AllowedAtRoot;
+        this.Folder = Folder;
     }
 
     public System.Guid Key { get; }
@@ -25,4 +27,6 @@ public sealed class DocumentTypeAttribute : Attribute
     public string? Icon { get; }
     public string? Description { get; }
     public bool AllowedAtRoot { get; }
+    /// <summary>Backoffice folder path, e.g. "Pages" or "Pages/Articles".</summary>
+    public string? Folder { get; }
 }

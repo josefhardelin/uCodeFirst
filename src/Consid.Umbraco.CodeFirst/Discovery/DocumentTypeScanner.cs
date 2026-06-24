@@ -32,6 +32,7 @@ internal sealed class DocumentTypeScanner
                 Icon: docTypeAttr.Icon,
                 Description: docTypeAttr.Description,
                 AllowedAtRoot: docTypeAttr.AllowedAtRoot,
+                Folder: docTypeAttr.Folder,
                 AllowedChildTypes: allowedChildren,
                 Properties: ScanProperties(type)));
         }

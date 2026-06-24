@@ -10,6 +10,7 @@ internal sealed record DocumentTypeDefinition(
     string? Icon,
     string? Description,
     bool AllowedAtRoot,
+    string? Folder,
     IReadOnlyList<Type> AllowedChildTypes,
     IReadOnlyList<PropertyDefinition> Properties);
 

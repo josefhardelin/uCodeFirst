@@ -1,4 +1,5 @@
-using System.Reflection;
+using System.Security.Cryptography;
+using System.Text;
 using Consid.Umbraco.CodeFirst.Attributes;
 using Consid.Umbraco.CodeFirst.Discovery;
 using Microsoft.Extensions.Logging;
@@ -32,14 +33,17 @@ internal sealed class ContentTypeSyncEngine
     {
         var aliasByKey = definitions.ToDictionary(d => d.Key, d => d.Alias);
 
+        // Pre-pass: ensure all referenced folders exist; build path → int-id map
+        var folderIdByPath = await EnsureFoldersAsync(definitions);
+
         // Pass 1: create/update structure (without AllowedChildren to avoid ordering issues)
         foreach (var def in definitions)
         {
             var existing = await _contentTypeService.GetAsync(def.Key);
             if (existing is null)
-                await CreateAsync(def, dataTypeByKey);
+                await CreateAsync(def, dataTypeByKey, folderIdByPath);
             else
-                await UpdateAsync(existing, def, dataTypeByKey);
+                await UpdateAsync(existing, def, dataTypeByKey, folderIdByPath);
         }
 
         // Pass 2: wire up AllowedChildren now that all types exist
@@ -59,9 +63,73 @@ internal sealed class ContentTypeSyncEngine
         }
     }
 
-    private async Task CreateAsync(DocumentTypeDefinition def, Dictionary<Guid, IDataType> dataTypeByKey)
+    // Returns a dictionary from normalised folder path (e.g. "Pages/Articles") → container int id.
+    private async Task<Dictionary<string, int>> EnsureFoldersAsync(IReadOnlyList<DocumentTypeDefinition> definitions)
     {
-        var contentType = new ContentType(_shortStringHelper, parentId: -1)
+        var folderIdByPath = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+
+        var paths = definitions
+            .Where(d => d.Folder is not null)
+            .Select(d => d.Folder!)
+            .Distinct(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var folderPath in paths)
+        {
+            var segments = folderPath.Split('/', StringSplitOptions.RemoveEmptyEntries);
+            var builtPath = string.Empty;
+            var parentId = -1;
+
+            foreach (var segment in segments)
+            {
+                builtPath = builtPath.Length == 0 ? segment : $"{builtPath}/{segment}";
+
+                if (folderIdByPath.TryGetValue(builtPath, out var existingId))
+                {
+                    parentId = existingId;
+                    continue;
+                }
+
+                var folderKey = DeterministicFolderKey(builtPath);
+                var existing = _contentTypeService.GetContainer(folderKey);
+
+                if (existing is not null)
+                {
+                    folderIdByPath[builtPath] = existing.Id;
+                    parentId = existing.Id;
+                    continue;
+                }
+
+                var result = _contentTypeService.CreateContainer(parentId, folderKey, segment, UmbConstants.Security.SuperUserId);
+                if (result.Success && result.Result?.Entity is not null)
+                {
+                    folderIdByPath[builtPath] = result.Result.Entity.Id;
+                    parentId = result.Result.Entity.Id;
+                    _logger.LogInformation("Created document type folder '{Path}'.", builtPath);
+                }
+                else
+                {
+                    _logger.LogError("Failed to create document type folder '{Path}'.", builtPath);
+                }
+            }
+        }
+
+        return await Task.FromResult(folderIdByPath);
+    }
+
+    private static Guid DeterministicFolderKey(string folderPath)
+    {
+        var hash = MD5.HashData(Encoding.UTF8.GetBytes($"consid.codefirst:folder:{folderPath.ToLowerInvariant()}"));
+        return new Guid(hash);
+    }
+
+    private async Task CreateAsync(
+        DocumentTypeDefinition def,
+        Dictionary<Guid, IDataType> dataTypeByKey,
+        Dictionary<string, int> folderIdByPath)
+    {
+        var parentId = def.Folder is not null && folderIdByPath.TryGetValue(def.Folder, out var fId) ? fId : -1;
+
+        var contentType = new ContentType(_shortStringHelper, parentId: parentId)
         {
             Key = def.Key,
             Alias = def.Alias,
@@ -80,13 +148,22 @@ internal sealed class ContentTypeSyncEngine
             _logger.LogError("Failed to create document type '{Alias}': {Status}.", def.Alias, result.Result);
     }
 
-    private async Task UpdateAsync(IContentType existing, DocumentTypeDefinition def, Dictionary<Guid, IDataType> dataTypeByKey)
+    private async Task UpdateAsync(
+        IContentType existing,
+        DocumentTypeDefinition def,
+        Dictionary<Guid, IDataType> dataTypeByKey,
+        Dictionary<string, int> folderIdByPath)
     {
         existing.Alias = def.Alias;
         existing.Name = def.Name;
         existing.Icon = def.Icon ?? "icon-document";
         existing.Description = def.Description ?? string.Empty;
         existing.AllowedAsRoot = def.AllowedAtRoot;
+
+        // Move to correct folder if it has changed
+        var targetParentId = def.Folder is not null && folderIdByPath.TryGetValue(def.Folder, out var fId) ? fId : -1;
+        if (existing.ParentId != targetParentId)
+            existing.ParentId = targetParentId;
 
         existing.PropertyGroups.Clear();
         ApplyProperties(existing, def, dataTypeByKey);
