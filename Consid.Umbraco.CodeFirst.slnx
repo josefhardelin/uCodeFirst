@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="src/Consid.Umbraco.CodeFirst/Consid.Umbraco.CodeFirst.csproj" />
+  <Project Path="tests/Consid.Umbraco.CodeFirst.Tests/Consid.Umbraco.CodeFirst.Tests.csproj" />
+</Solution>

@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Version>0.1.0-alpha.1</Version>
+    <Authors>Consid</Authors>
+    <Description>Code-first schema authoring for Umbraco CMS 17+. Define document types as C# classes; the package syncs them into Umbraco on startup.</Description>
+    <PackageTags>umbraco;code-first;schema;content-types;document-types</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Umbraco.Cms.Web.Common" Version="17.4.2" />
+  </ItemGroup>
+
+</Project>
