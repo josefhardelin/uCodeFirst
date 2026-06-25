@@ -190,7 +190,7 @@ internal sealed class ContentTypeSyncEngine
             Key = def.Key,
             Alias = def.Alias,
             Name = def.Name,
-            Icon = def.Icon ?? "icon-document",
+            Icon = BuildIconString(def.Icon, def.Color),
             Description = def.Description ?? string.Empty,
             AllowedAsRoot = def.AllowedAtRoot,
             IsElement = def.IsElement
@@ -214,7 +214,7 @@ internal sealed class ContentTypeSyncEngine
     {
         existing.Alias = def.Alias;
         existing.Name = def.Name;
-        existing.Icon = def.Icon ?? "icon-document";
+        existing.Icon = BuildIconString(def.Icon, def.Color);
         existing.Description = def.Description ?? string.Empty;
         existing.AllowedAsRoot = def.AllowedAtRoot;
         existing.IsElement = def.IsElement;
@@ -395,5 +395,11 @@ internal sealed class ContentTypeSyncEngine
         }
 
         contentType.AllowedContentTypes = sorts;
+    }
+
+    private static string BuildIconString(string? icon, string? color)
+    {
+        var base_ = icon ?? "icon-document";
+        return color is not null ? $"{base_} {color}" : base_;
     }
 }

@@ -4,7 +4,7 @@ using uCodeFirst.DataTypes;
 
 namespace Basicv17.Models.Compositions;
 
-[CompositionType("SEO", Folder: "Compositions", Guid = "c0000001-0000-0000-0000-000000000001")]
+[CompositionType("SEO", Icon: ContentTypeIcon.Globe, Color: ContentTypeColor.Green, Folder: "Compositions", Guid = "c0000001-0000-0000-0000-000000000001")]
 public interface ISeoComposition
 {
     [Group("SEO", SortOrder: 0)]

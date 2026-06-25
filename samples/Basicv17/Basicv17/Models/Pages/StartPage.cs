@@ -13,7 +13,8 @@ using Basicv17.Models.DataTypes;
 namespace Basicv17.Models.Pages;
 
 [DocumentType("Start Page",
-    Icon: "icon-home",
+    Icon: ContentTypeIcon.Home,
+    Color: ContentTypeColor.Blue,
     AllowedAtRoot: true,
     Folder: "Pages",
     DefaultTemplate: "startPage",

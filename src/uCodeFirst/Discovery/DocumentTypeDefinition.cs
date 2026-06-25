@@ -9,6 +9,7 @@ internal sealed record DocumentTypeDefinition(
     string Alias,
     string Name,
     string? Icon,
+    string? Color,
     string? Description,
     bool AllowedAtRoot,
     string? Folder,

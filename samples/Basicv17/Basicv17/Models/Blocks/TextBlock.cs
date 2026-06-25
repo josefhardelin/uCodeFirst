@@ -7,7 +7,7 @@ using Umbraco.Extensions;
 
 namespace Basicv17.Models.Blocks;
 
-[ElementType("Text Block", Icon: "icon-document", Folder: "Blocks", Guid = "adc904bf-01fa-4885-a907-4b047b0e894a")]
+[ElementType("Text Block", Icon: ContentTypeIcon.Paragraph, Color: ContentTypeColor.Gray, Folder: "Blocks", Guid = "adc904bf-01fa-4885-a907-4b047b0e894a")]
 [PublishedModel("textBlock")]
 public partial class TextBlock : PublishedElementModel
 {

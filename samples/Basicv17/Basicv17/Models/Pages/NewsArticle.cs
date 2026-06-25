@@ -9,7 +9,8 @@ using Umbraco.Extensions;
 namespace Basicv17.Models.Pages;
 
 [DocumentType("News Article",
-    Icon: "icon-newspaper",
+    Icon: ContentTypeIcon.Newspaper,
+    Color: ContentTypeColor.Yellow,
     Folder: "Pages",
     DefaultTemplate: "newsArticle",
     Guid = "8f3c1a2b-3e4d-4f5a-b6c7-d8e9f0a1b2c3")]

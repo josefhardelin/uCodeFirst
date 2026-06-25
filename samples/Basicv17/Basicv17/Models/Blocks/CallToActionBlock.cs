@@ -7,7 +7,7 @@ using Umbraco.Extensions;
 
 namespace Basicv17.Models.Blocks;
 
-[ElementType("Call To Action Block", Icon: "icon-link", Folder: "Blocks", Guid = "e1000001-0000-0000-0000-000000000001")]
+[ElementType("Call To Action Block", Icon: ContentTypeIcon.Flash, Color: ContentTypeColor.Red, Folder: "Blocks", Guid = "e1000001-0000-0000-0000-000000000001")]
 [PublishedModel("callToActionBlock")]
 public partial class CallToActionBlock : PublishedElementModel
 {
