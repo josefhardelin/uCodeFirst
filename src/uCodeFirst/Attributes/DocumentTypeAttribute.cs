@@ -29,7 +29,9 @@ public sealed class DocumentTypeAttribute : Attribute
     public System.Guid Key => System.Guid.Parse(Guid);
     public string Name { get; }
     public string? Alias { get; }
+    /// <summary>Backoffice icon class. Use <see cref="ContentTypeIcon"/> for available constants.</summary>
     public string? Icon { get; }
+    /// <summary>Backoffice icon color. Use <see cref="ContentTypeColor"/> for available constants.</summary>
     public string? Color { get; }
     public string? Description { get; }
     public bool AllowedAtRoot { get; }
