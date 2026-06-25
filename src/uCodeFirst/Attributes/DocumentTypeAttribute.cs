@@ -4,7 +4,6 @@ namespace uCodeFirst.Attributes;
 public sealed class DocumentTypeAttribute : Attribute
 {
     public DocumentTypeAttribute(
-        string Guid,
         string Name,
         string? Alias = null,
         string? Icon = null,
@@ -13,7 +12,6 @@ public sealed class DocumentTypeAttribute : Attribute
         string? Folder = null,
         string? DefaultTemplate = null)
     {
-        Key = System.Guid.Parse(Guid);
         this.Name = Name;
         this.Alias = Alias;
         this.Icon = Icon;
@@ -23,7 +21,10 @@ public sealed class DocumentTypeAttribute : Attribute
         this.DefaultTemplate = DefaultTemplate;
     }
 
-    public System.Guid Key { get; }
+    /// <summary>Stable GUID for this document type. Leave unset — the code fixer will generate one.</summary>
+    public string Guid { get; set; } = "";
+
+    public System.Guid Key => System.Guid.Parse(Guid);
     public string Name { get; }
     public string? Alias { get; }
     public string? Icon { get; }

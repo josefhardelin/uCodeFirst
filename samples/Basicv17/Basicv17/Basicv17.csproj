@@ -10,6 +10,6 @@
       <PackageReference Include="Umbraco.Cms" Version="17.4.2" />
     </ItemGroup>
     <ItemGroup>
-        <ProjectReference Include="../../../uCodeFirst/src/uCodeFirst/uCodeFirst.csproj" />
+        <ProjectReference Include="../../../src/uCodeFirst/uCodeFirst.csproj" />
     </ItemGroup>
 </Project>

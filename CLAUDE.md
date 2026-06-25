@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Sample project
+
+`samples/Basicv17/` is a working Umbraco site that demonstrates the library API. **Always update it when a public API changes** — attribute signatures, namespace moves, new required patterns, etc. The sample should compile and reflect the current API at all times. It references the library via a local `ProjectReference`.
+
 ## Commands
 
 ```bash

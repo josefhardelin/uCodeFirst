@@ -198,8 +198,11 @@ This keeps production schema changes deliberate and uSync-controlled.
 
 ## Roadmap
 
+- [x] Element types, Block List, Block Grid
+- [x] Compositions (C# interfaces → Umbraco compositions)
+- [x] Template linkage
+- [x] Code-first data type classes (`DataTypeBase` hierarchy, `[DataType]` attribute)
+- [x] Roslyn analyzer (UCF001 — build error on missing GUID, with code fixer)
+- [ ] Property type validation — UCF002 analyzer + `PreFlightValidator` check that the C# property return type matches the data type (e.g. `[TrueFalse]` must be on a `bool?`)
 - [ ] Source generator (removes explicit getter boilerplate)
-- [ ] Element types, Block List, Block Grid
-- [ ] Compositions (C# interfaces → Umbraco compositions)
-- [ ] Template linkage
 - [ ] NuGet package release

@@ -292,8 +292,8 @@ internal sealed class ContentTypeSyncEngine
 
             foreach (var prop in group)
             {
-                var recipe = EditorRecipeResolver.Resolve(prop.EditorAttribute);
-                if (!dataTypeByKey.TryGetValue(recipe.Key, out var dataType))
+                var descriptor = prop.DataType.GetDescriptor();
+                if (!dataTypeByKey.TryGetValue(descriptor.Key, out var dataType))
                 {
                     _logger.LogWarning("Data type for property '{Alias}' on '{Type}' not found — skipping.", prop.Alias, def.ClrType.Name);
                     continue;

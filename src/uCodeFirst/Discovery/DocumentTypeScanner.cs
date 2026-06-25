@@ -1,5 +1,6 @@
 using System.Reflection;
 using uCodeFirst.Attributes;
+using uCodeFirst.DataTypes;
 
 namespace uCodeFirst.Discovery;
 
@@ -112,20 +113,20 @@ internal sealed class DocumentTypeScanner
 
         foreach (var prop in iface.GetProperties(BindingFlags.Public | BindingFlags.Instance))
         {
-            var editorAttr = prop.GetCustomAttribute<PropertyEditorAttribute>();
-            if (editorAttr is null)
+            var dataType = prop.GetCustomAttribute<DataTypeBase>();
+            if (dataType is null)
                 continue;
 
             var groupAttr = prop.GetCustomAttribute<GroupAttribute>();
 
             result.Add(new PropertyDefinition(
-                Alias: editorAttr.Alias ?? ToAlias(prop.Name),
-                Name: editorAttr.Name ?? prop.Name,
+                Alias: dataType.Alias ?? ToAlias(prop.Name),
+                Name: dataType.Name ?? prop.Name,
                 GroupName: groupAttr?.Name ?? Groups.Content,
                 SortOrder: groupAttr?.SortOrder ?? 0,
-                Mandatory: editorAttr.Mandatory,
-                Description: editorAttr.Description,
-                EditorAttribute: editorAttr));
+                Mandatory: dataType.Mandatory,
+                Description: dataType.Description,
+                DataType: dataType));
         }
 
         return result;
@@ -140,20 +141,20 @@ internal sealed class DocumentTypeScanner
             if (excludeNames.Contains(prop.Name))
                 continue;
 
-            var editorAttr = prop.GetCustomAttribute<PropertyEditorAttribute>();
-            if (editorAttr is null)
+            var dataType = prop.GetCustomAttribute<DataTypeBase>();
+            if (dataType is null)
                 continue;
 
             var groupAttr = prop.GetCustomAttribute<GroupAttribute>();
 
             result.Add(new PropertyDefinition(
-                Alias: editorAttr.Alias ?? ToAlias(prop.Name),
-                Name: editorAttr.Name ?? prop.Name,
+                Alias: dataType.Alias ?? ToAlias(prop.Name),
+                Name: dataType.Name ?? prop.Name,
                 GroupName: groupAttr?.Name ?? Groups.Content,
                 SortOrder: groupAttr?.SortOrder ?? 0,
-                Mandatory: editorAttr.Mandatory,
-                Description: editorAttr.Description,
-                EditorAttribute: editorAttr));
+                Mandatory: dataType.Mandatory,
+                Description: dataType.Description,
+                DataType: dataType));
         }
 
         return result;

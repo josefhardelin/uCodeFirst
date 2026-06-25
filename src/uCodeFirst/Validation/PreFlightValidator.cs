@@ -1,5 +1,6 @@
 using System.Reflection;
 using uCodeFirst.Attributes;
+using uCodeFirst.DataTypes;
 using uCodeFirst.Discovery;
 
 namespace uCodeFirst.Validation;
@@ -47,15 +48,15 @@ internal sealed class PreFlightValidator
             }
         }
 
-        // Validate block types in [BlockList] and [BlockGrid] properties
+        // Validate block types in [BlockListDataType] and [BlockGridDataType] properties
         foreach (var def in definitions)
         {
             foreach (var prop in def.Properties)
             {
-                Type[]? blockTypes = prop.EditorAttribute switch
+                Type[]? blockTypes = prop.DataType switch
                 {
-                    BlockListAttribute bl => bl.BlockTypes,
-                    BlockGridAttribute bg => bg.BlockTypes,
+                    BlockListDataType bl => bl.BlockTypes,
+                    BlockGridDataType bg => bg.BlockTypes,
                     _ => null
                 };
 
@@ -66,9 +67,9 @@ internal sealed class PreFlightValidator
                 {
                     var elemAttr = blockType.GetCustomAttribute<ElementTypeAttribute>();
                     if (elemAttr is null)
-                        errors.Add($"[{prop.EditorAttribute.GetType().Name}] on '{def.ClrType.FullName}.{prop.Name}' references '{blockType.FullName}' which has no [ElementType] attribute.");
+                        errors.Add($"[{prop.DataType.GetType().Name}] on '{def.ClrType.FullName}.{prop.Alias}' references '{blockType.FullName}' which has no [ElementType] attribute.");
                     else if (!scannedKeys.Contains(elemAttr.Key))
-                        errors.Add($"[{prop.EditorAttribute.GetType().Name}] on '{def.ClrType.FullName}.{prop.Name}' references '{blockType.FullName}' which was not discovered in the scanned assembly set.");
+                        errors.Add($"[{prop.DataType.GetType().Name}] on '{def.ClrType.FullName}.{prop.Alias}' references '{blockType.FullName}' which was not discovered in the scanned assembly set.");
                 }
             }
         }

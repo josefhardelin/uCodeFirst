@@ -1,4 +1,4 @@
-using uCodeFirst.Attributes;
+using uCodeFirst.DataTypes;
 
 namespace uCodeFirst.Discovery;
 
@@ -24,4 +24,4 @@ internal sealed record PropertyDefinition(
     int SortOrder,
     bool Mandatory,
     string? Description,
-    PropertyEditorAttribute EditorAttribute);
+    DataTypeBase DataType);

@@ -36,7 +36,8 @@ internal sealed class DataTypeSyncEngine
         {
             foreach (var prop in def.Properties)
             {
-                var recipe = EditorRecipeResolver.Resolve(prop.EditorAttribute);
+                var descriptor = prop.DataType.GetDescriptor();
+                var recipe = prop.DataType.BuildRecipe(descriptor.Key, descriptor.Name);
                 recipeByKey[recipe.Key] = recipe;
             }
         }

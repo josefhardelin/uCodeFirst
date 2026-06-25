@@ -4,14 +4,12 @@ namespace uCodeFirst.Attributes;
 public sealed class CompositionTypeAttribute : Attribute
 {
     public CompositionTypeAttribute(
-        string Guid,
         string Name,
         string? Alias = null,
         string? Icon = null,
         string? Description = null,
         string? Folder = null)
     {
-        Key = System.Guid.Parse(Guid);
         this.Name = Name;
         this.Alias = Alias;
         this.Icon = Icon;
@@ -19,7 +17,10 @@ public sealed class CompositionTypeAttribute : Attribute
         this.Folder = Folder;
     }
 
-    public System.Guid Key { get; }
+    /// <summary>Stable GUID for this composition type. Leave unset — the code fixer will generate one.</summary>
+    public string Guid { get; set; } = "";
+
+    public System.Guid Key => System.Guid.Parse(Guid);
     public string Name { get; }
     public string? Alias { get; }
     public string? Icon { get; }
