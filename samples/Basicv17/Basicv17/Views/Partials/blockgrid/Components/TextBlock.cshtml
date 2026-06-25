@@ -1,0 +1,16 @@
+@inherits Umbraco.Cms.Web.Common.Views.UmbracoViewPage<Umbraco.Cms.Core.Models.Blocks.BlockGridItem<Basicv17.Models.Blocks.TextBlock>>
+@{
+    var block = Model.Content;
+}
+
+<div class="text-block">
+    @if (block.Heading is not null)
+    {
+        <h2 class="text-block__heading">@block.Heading</h2>
+    }
+
+    @if (block.Text is not null)
+    {
+        <div class="text-block__body">@block.Text</div>
+    }
+</div>

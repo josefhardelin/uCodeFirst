@@ -1,0 +1,18 @@
+@inherits Umbraco.Cms.Web.Common.Views.UmbracoViewPage<Umbraco.Cms.Core.Models.Blocks.BlockListItem<Basicv17.Models.Blocks.CallToActionBlock>>
+@{
+    var block = Model.Content;
+}
+
+<div class="cta-block">
+    @if (block.Title is not null)
+    {
+        <p class="cta-block__title">@block.Title</p>
+    }
+
+    @if (block.LinkUrl is not null)
+    {
+        <a href="@block.LinkUrl" class="cta-block__link">
+            @(block.LinkLabel ?? block.LinkUrl)
+        </a>
+    }
+</div>

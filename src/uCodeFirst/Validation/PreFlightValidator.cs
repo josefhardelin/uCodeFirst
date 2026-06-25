@@ -53,23 +53,26 @@ internal sealed class PreFlightValidator
         {
             foreach (var prop in def.Properties)
             {
-                Type[]? blockTypes = prop.DataType switch
+                BlockDefinition[]? blocks = prop.DataType switch
                 {
-                    BlockListDataType bl => bl.BlockTypes,
-                    BlockGridDataType bg => bg.BlockTypes,
+                    BlockListDataType bl => bl.Blocks,
+                    BlockGridDataType bg => bg.Blocks,
                     _ => null
                 };
 
-                if (blockTypes is null)
+                if (blocks is null)
                     continue;
 
-                foreach (var blockType in blockTypes)
+                foreach (var block in blocks)
                 {
-                    var elemAttr = blockType.GetCustomAttribute<ElementTypeAttribute>();
-                    if (elemAttr is null)
-                        errors.Add($"[{prop.DataType.GetType().Name}] on '{def.ClrType.FullName}.{prop.Alias}' references '{blockType.FullName}' which has no [ElementType] attribute.");
-                    else if (!scannedKeys.Contains(elemAttr.Key))
-                        errors.Add($"[{prop.DataType.GetType().Name}] on '{def.ClrType.FullName}.{prop.Alias}' references '{blockType.FullName}' which was not discovered in the scanned assembly set.");
+                    foreach (var blockType in new[] { block.ContentType, block.SettingsType }.OfType<Type>())
+                    {
+                        var elemAttr = blockType.GetCustomAttribute<ElementTypeAttribute>();
+                        if (elemAttr is null)
+                            errors.Add($"[{prop.DataType.GetType().Name}] on '{def.ClrType.FullName}.{prop.Alias}' references '{blockType.FullName}' which has no [ElementType] attribute.");
+                        else if (!scannedKeys.Contains(elemAttr.Key))
+                            errors.Add($"[{prop.DataType.GetType().Name}] on '{def.ClrType.FullName}.{prop.Alias}' references '{blockType.FullName}' which was not discovered in the scanned assembly set.");
+                    }
                 }
             }
         }

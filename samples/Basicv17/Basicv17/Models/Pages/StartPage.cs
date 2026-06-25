@@ -39,6 +39,10 @@ public partial class StartPage : PublishedContentModel, ISeoComposition
     [ContentBlocksList(Name = "Content Blocks")]
     public BlockListModel? ContentBlocks => this.Value<BlockListModel>(_publishedValueFallback, "contentBlocks");
 
+    [Group(Groups.Content, SortOrder: 3)]
+    [ContentBlocksGrid(Name = "Content Grid")]
+    public BlockGridModel? ContentGrid => this.Value<BlockGridModel>(_publishedValueFallback, "contentGrid");
+
     string? ISeoComposition.PageTitle => this.Value<string>(_publishedValueFallback, "pageTitle");
     string? ISeoComposition.MetaDescription => this.Value<string>(_publishedValueFallback, "metaDescription");
 }

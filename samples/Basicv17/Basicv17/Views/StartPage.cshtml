@@ -1,4 +1,4 @@
-﻿@inherits Umbraco.Cms.Web.Common.Views.UmbracoViewPage<StartPage>
+@inherits Umbraco.Cms.Web.Common.Views.UmbracoViewPage<StartPage>
 @{
     ViewBag.Title = Model.Headline ?? Model.Name;
 }
@@ -9,5 +9,15 @@
     @if (Model.Body is not null)
     {
         <div>@Model.Body</div>
+    }
+
+    @if (Model.ContentBlocks is not null)
+    {
+        @await Html.GetBlockListHtmlAsync(Model, "contentBlocks")
+    }
+
+    @if (Model.ContentGrid is not null)
+    {
+        @await Html.GetBlockGridHtmlAsync(Model, "contentGrid")
     }
 </main>

@@ -224,8 +224,7 @@ internal sealed class ContentTypeSyncEngine
         if (existing.ParentId != targetParentId)
             existing.ParentId = targetParentId;
 
-        existing.PropertyGroups.Clear();
-        ApplyProperties(existing, def, dataTypeByKey);
+        MergeProperties(existing, def, dataTypeByKey);
         await ApplyTemplateAsync(existing, def);
 
         var result = await _contentTypeService.UpdateAsync(existing, Constants.Security.SuperUserKey);
@@ -308,6 +307,74 @@ internal sealed class ContentTypeSyncEngine
                 };
 
                 contentType.AddPropertyType(propertyType, groupAlias, group.Key);
+            }
+        }
+    }
+
+    private void MergeProperties(IContentType contentType, DocumentTypeDefinition def, Dictionary<Guid, IDataType> dataTypeByKey)
+    {
+        var groupedProps = def.Properties
+            .GroupBy(p => p.GroupName)
+            .Select((g, i) => (Group: g, Index: i))
+            .ToList();
+
+        foreach (var (group, groupIndex) in groupedProps)
+        {
+            var groupAlias = DocumentTypeScanner.ToAlias(group.Key);
+
+            // Find or create the property group — never wipe it
+            var propertyGroup = contentType.PropertyGroups
+                .FirstOrDefault(g => string.Equals(g.Alias, groupAlias, StringComparison.OrdinalIgnoreCase));
+
+            if (propertyGroup is null)
+            {
+                propertyGroup = new PropertyGroup(isPublishing: true)
+                {
+                    Alias = groupAlias,
+                    Name = group.Key,
+                    Type = PropertyGroupType.Tab,
+                    SortOrder = groupIndex
+                };
+                contentType.PropertyGroups.Add(propertyGroup);
+            }
+            else
+            {
+                propertyGroup.Name = group.Key;
+                propertyGroup.SortOrder = groupIndex;
+            }
+
+            foreach (var prop in group)
+            {
+                var descriptor = prop.DataType.GetDescriptor();
+                if (!dataTypeByKey.TryGetValue(descriptor.Key, out var dataType))
+                {
+                    _logger.LogWarning("Data type for property '{Alias}' on '{Type}' not found — skipping.", prop.Alias, def.ClrType.Name);
+                    continue;
+                }
+
+                // Update existing property type in-place to preserve its ID and content data
+                var existingProp = contentType.PropertyTypes
+                    .FirstOrDefault(pt => string.Equals(pt.Alias, prop.Alias, StringComparison.OrdinalIgnoreCase));
+
+                if (existingProp is not null)
+                {
+                    existingProp.Name = prop.Name;
+                    existingProp.Mandatory = prop.Mandatory;
+                    existingProp.Description = prop.Description ?? string.Empty;
+                    existingProp.SortOrder = prop.SortOrder;
+                    existingProp.DataTypeKey = dataType.Key;
+                }
+                else
+                {
+                    var propertyType = new PropertyType(_shortStringHelper, dataType, prop.Alias)
+                    {
+                        Name = prop.Name,
+                        Mandatory = prop.Mandatory,
+                        Description = prop.Description ?? string.Empty,
+                        SortOrder = prop.SortOrder
+                    };
+                    contentType.AddPropertyType(propertyType, groupAlias, group.Key);
+                }
             }
         }
     }
