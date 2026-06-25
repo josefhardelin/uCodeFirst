@@ -1,0 +1,13 @@
+﻿@inherits Umbraco.Cms.Web.Common.Views.UmbracoViewPage<NewsArticle>
+@{
+    ViewBag.Title = Model.Headline ?? Model.Name;
+}
+
+<article>
+    <h1>@Model.Headline</h1>
+
+    @if (Model.Body is not null)
+    {
+        <div>@Model.Body</div>
+    }
+</article>
