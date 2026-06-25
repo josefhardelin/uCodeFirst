@@ -5,7 +5,7 @@ using Umbraco.Cms.Core.Models.PublishedContent;
 using Umbraco.Cms.Web.Common.PublishedModels;
 using Umbraco.Extensions;
 
-namespace UmbracoTCodeFIrst.Models.Blocks;
+namespace Basicv17.Models.Blocks;
 
 [ElementType("Call To Action Block", Icon: "icon-link", Folder: "Blocks", Guid = "e1000001-0000-0000-0000-000000000001")]
 [PublishedModel("callToActionBlock")]

@@ -6,11 +6,11 @@ using Umbraco.Cms.Core.Models.PublishedContent;
 using Umbraco.Cms.Core.Strings;
 using Umbraco.Cms.Web.Common.PublishedModels;
 using Umbraco.Extensions;
-using UmbracoTCodeFIrst.Models.Blocks;
-using UmbracoTCodeFIrst.Models.Compositions;
-using UmbracoTCodeFIrst.Models.DataTypes;
+using Basicv17.Models.Blocks;
+using Basicv17.Models.Compositions;
+using Basicv17.Models.DataTypes;
 
-namespace UmbracoTCodeFIrst.Models.Pages;
+namespace Basicv17.Models.Pages;
 
 [DocumentType("Start Page",
     Icon: "icon-home",

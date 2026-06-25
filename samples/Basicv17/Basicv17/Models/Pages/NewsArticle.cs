@@ -6,7 +6,7 @@ using Umbraco.Cms.Core.Strings;
 using Umbraco.Cms.Web.Common.PublishedModels;
 using Umbraco.Extensions;
 
-namespace UmbracoTCodeFIrst.Models.Pages;
+namespace Basicv17.Models.Pages;
 
 [DocumentType("News Article",
     Icon: "icon-newspaper",
