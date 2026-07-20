@@ -16,6 +16,7 @@ public static class UmbracoBuilderExtensions
             .AddSingleton<PreFlightValidator>()
             .AddSingleton<DataTypeSyncEngine>()
             .AddSingleton<ContentTypeSyncEngine>()
+            .AddSingleton<MediaTypeSyncEngine>()
             .AddSingleton<CodeFirstSyncService>();
 
         builder.AddNotificationAsyncHandler<UmbracoApplicationStartedNotification, CodeFirstStartupHandler>();

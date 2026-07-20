@@ -163,6 +163,46 @@ internal sealed class DocumentTypeScanner
         return result;
     }
 
+    public IReadOnlyList<MediaTypeDefinition> ScanMediaTypes(IEnumerable<Assembly> assemblies)
+    {
+        var definitions = new List<MediaTypeDefinition>();
+
+        var allTypes = assemblies
+            .SelectMany(a =>
+            {
+                try { return a.GetTypes(); }
+                catch (ReflectionTypeLoadException ex) { return ex.Types.OfType<Type>(); }
+            })
+            .ToList();
+
+        foreach (var type in allTypes.Where(t => t is { IsClass: true, IsAbstract: false } && t.IsDefined(typeof(MediaTypeAttribute))))
+        {
+            var attr = type.GetCustomAttribute<MediaTypeAttribute>()!;
+            var alias = attr.Alias ?? ToAlias(type.Name);
+            var allowedChildren = type.GetCustomAttribute<AllowedChildrenAttribute>()?.Types ?? Array.Empty<Type>();
+
+            var compositionKeys = attr.Compositions
+                .Select(g => System.Guid.Parse(g))
+                .ToList();
+
+            definitions.Add(new MediaTypeDefinition(
+                ClrType: type,
+                Key: attr.Key,
+                Alias: alias,
+                Name: attr.Name,
+                Icon: attr.Icon,
+                Color: attr.Color,
+                Description: attr.Description,
+                AllowedAtRoot: attr.AllowedAtRoot,
+                Folder: attr.Folder,
+                AllowedChildTypes: allowedChildren,
+                Properties: ScanClassProperties(type, []),
+                CompositionKeys: compositionKeys));
+        }
+
+        return definitions;
+    }
+
     internal static string ToAlias(string name) =>
         name.Length == 0 ? name : char.ToLowerInvariant(name[0]) + name[1..];
 }

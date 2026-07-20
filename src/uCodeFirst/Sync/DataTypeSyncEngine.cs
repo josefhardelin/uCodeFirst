@@ -27,19 +27,29 @@ internal sealed class DataTypeSyncEngine
         _logger = logger;
     }
 
-    public async Task<Dictionary<Guid, IDataType>> EnsureDataTypesAsync(
+    public Task<Dictionary<Guid, IDataType>> EnsureDataTypesAsync(
         IReadOnlyList<DocumentTypeDefinition> definitions,
+        CancellationToken ct = default) =>
+        EnsureFromPropertiesAsync(definitions.SelectMany(d => d.Properties), ct);
+
+    public Task<Dictionary<Guid, IDataType>> EnsureMediaDataTypesAsync(
+        IReadOnlyList<MediaTypeDefinition> definitions,
         CancellationToken ct = default)
     {
+        var allProperties = definitions.SelectMany(d => d.Properties).ToList();
+        return EnsureFromPropertiesAsync(allProperties, ct);
+    }
+
+    private async Task<Dictionary<Guid, IDataType>> EnsureFromPropertiesAsync(
+        IEnumerable<PropertyDefinition> properties,
+        CancellationToken ct)
+    {
         var recipeByKey = new Dictionary<Guid, EditorRecipe>();
-        foreach (var def in definitions)
+        foreach (var prop in properties)
         {
-            foreach (var prop in def.Properties)
-            {
-                var descriptor = prop.DataType.GetDescriptor();
-                var recipe = prop.DataType.BuildRecipe(descriptor.Key, descriptor.Name);
-                recipeByKey[recipe.Key] = recipe;
-            }
+            var descriptor = prop.DataType.GetDescriptor();
+            var recipe = prop.DataType.BuildRecipe(descriptor.Key, descriptor.Name);
+            recipeByKey[recipe.Key] = recipe;
         }
 
         var dataTypeByKey = new Dictionary<Guid, IDataType>();
