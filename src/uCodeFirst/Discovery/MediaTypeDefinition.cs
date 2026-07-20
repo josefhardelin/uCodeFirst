@@ -12,4 +12,5 @@ internal sealed record MediaTypeDefinition(
     string? Folder,
     IReadOnlyList<Type> AllowedChildTypes,
     IReadOnlyList<PropertyDefinition> Properties,
-    IReadOnlyList<Guid> CompositionKeys);
+    IReadOnlyList<Guid> CompositionKeys,
+    Guid? ParentKey);

@@ -95,6 +95,24 @@ internal sealed class DocumentTypeScanner
         return definitions;
     }
 
+    // A [MediaType] class may only inherit from PublishedContentModel or from a library-provided
+    // External stub (e.g. the built-in Image type) — never from another regular code-first media
+    // type. This keeps the whole parent graph resolvable in a single sync pass, since every valid
+    // parent already exists in Umbraco before sync ever runs.
+    private static Guid? GetMediaTypeParentKey(Type type)
+    {
+        var baseAttr = type.BaseType?.GetCustomAttribute<MediaTypeAttribute>();
+        if (baseAttr is null)
+            return null;
+
+        if (!baseAttr.External)
+            throw new InvalidOperationException(
+                $"'{type.FullName}' inherits from '{type.BaseType!.FullName}', but that class is not marked External on [MediaType]. " +
+                "MediaType classes may only inherit from PublishedContentModel or a library-provided built-in base type marked External = true.");
+
+        return baseAttr.Key;
+    }
+
     private static IReadOnlyList<Guid> GetCompositionKeys(Type type) =>
         type.GetInterfaces()
             .Select(i => i.GetCustomAttribute<CompositionTypeAttribute>())
@@ -178,12 +196,17 @@ internal sealed class DocumentTypeScanner
         foreach (var type in allTypes.Where(t => t is { IsClass: true, IsAbstract: false } && t.IsDefined(typeof(MediaTypeAttribute))))
         {
             var attr = type.GetCustomAttribute<MediaTypeAttribute>()!;
+            if (attr.External)
+                continue; // stub for a type that already exists in Umbraco — never synced
+
             var alias = attr.Alias ?? ToAlias(type.Name);
             var allowedChildren = type.GetCustomAttribute<AllowedChildrenAttribute>()?.Types ?? Array.Empty<Type>();
 
             var compositionKeys = attr.Compositions
                 .Select(g => System.Guid.Parse(g))
                 .ToList();
+
+            var parentKey = GetMediaTypeParentKey(type);
 
             definitions.Add(new MediaTypeDefinition(
                 ClrType: type,
@@ -197,7 +220,8 @@ internal sealed class DocumentTypeScanner
                 Folder: attr.Folder,
                 AllowedChildTypes: allowedChildren,
                 Properties: ScanClassProperties(type, []),
-                CompositionKeys: compositionKeys));
+                CompositionKeys: compositionKeys,
+                ParentKey: parentKey));
         }
 
         return definitions;

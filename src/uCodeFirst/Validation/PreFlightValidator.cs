@@ -234,6 +234,9 @@ internal sealed class PreFlightValidator
                 else if (!scannedKeys.Contains(childAttr.Key))
                     errors.Add($"[AllowedChildren] on media type '{def.ClrType.FullName}' references '{childType.FullName}' which was not discovered in the scanned assembly set.");
             }
+
+            if (def.ParentKey is not null && def.Folder is not null)
+                errors.Add($"Media type '{def.ClrType.FullName}' declares both a parent (via inheritance from '{def.ClrType.BaseType?.FullName}') and a Folder ('{def.Folder}') — a media type can only have one.");
         }
     }
 }

@@ -160,17 +160,31 @@ internal sealed class MediaTypeSyncEngine
         Dictionary<Guid, IDataType> dataTypeByKey,
         Dictionary<string, int> folderIdByPath)
     {
-        var parentId = def.Folder is not null && folderIdByPath.TryGetValue(def.Folder, out var fId) ? fId : -1;
+        MediaType mediaType;
 
-        var mediaType = new MediaType(_shortStringHelper, parentId: parentId)
+        if (def.ParentKey is { } parentKey)
         {
-            Key = def.Key,
-            Alias = def.Alias,
-            Name = def.Name,
-            Icon = BuildIconString(def.Icon, def.Color),
-            Description = def.Description ?? string.Empty,
-            AllowedAsRoot = def.AllowedAtRoot
-        };
+            var parentType = await _mediaTypeService.GetAsync(parentKey);
+            if (parentType is null)
+            {
+                _logger.LogError("Parent media type '{ParentKey}' for '{Alias}' not found — is Umbraco fully installed? Skipping.", parentKey, def.Alias);
+                return;
+            }
+
+            mediaType = new MediaType(_shortStringHelper, parentType);
+        }
+        else
+        {
+            var parentId = def.Folder is not null && folderIdByPath.TryGetValue(def.Folder, out var fId) ? fId : -1;
+            mediaType = new MediaType(_shortStringHelper, parentId: parentId);
+        }
+
+        mediaType.Key = def.Key;
+        mediaType.Alias = def.Alias;
+        mediaType.Name = def.Name;
+        mediaType.Icon = BuildIconString(def.Icon, def.Color);
+        mediaType.Description = def.Description ?? string.Empty;
+        mediaType.AllowedAsRoot = def.AllowedAtRoot;
 
         ApplyProperties(mediaType, def, dataTypeByKey);
 
@@ -193,9 +207,26 @@ internal sealed class MediaTypeSyncEngine
         existing.Description = def.Description ?? string.Empty;
         existing.AllowedAsRoot = def.AllowedAtRoot;
 
-        var targetParentId = def.Folder is not null && folderIdByPath.TryGetValue(def.Folder, out var fId) ? fId : -1;
-        if (existing.ParentId != targetParentId)
-            existing.ParentId = targetParentId;
+        if (def.ParentKey is { } parentKey)
+        {
+            var parentType = await _mediaTypeService.GetAsync(parentKey);
+            if (parentType is null)
+            {
+                _logger.LogError("Parent media type '{ParentKey}' for '{Alias}' not found — is Umbraco fully installed? Skipping update.", parentKey, def.Alias);
+                return;
+            }
+
+            if (existing.ParentId != parentType.Id)
+                throw new InvalidOperationException(
+                    $"Media type '{def.Alias}' is already synced with ParentId {existing.ParentId}, but its code now declares parent '{parentType.Alias}' " +
+                    $"(id {parentType.Id}). Changing a media type's parent after creation is not supported by sync — fix it manually in the backoffice or delete and recreate it.");
+        }
+        else
+        {
+            var targetParentId = def.Folder is not null && folderIdByPath.TryGetValue(def.Folder, out var fId) ? fId : -1;
+            if (existing.ParentId != targetParentId)
+                existing.ParentId = targetParentId;
+        }
 
         MergeProperties(existing, def, dataTypeByKey);
 

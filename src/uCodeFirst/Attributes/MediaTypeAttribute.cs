@@ -11,7 +11,8 @@ public sealed class MediaTypeAttribute : Attribute
         string? Description = null,
         bool AllowedAtRoot = false,
         string? Folder = null,
-        string[]? Compositions = null)
+        string[]? Compositions = null,
+        bool External = false)
     {
         this.Name = Name;
         this.Alias = Alias;
@@ -21,6 +22,7 @@ public sealed class MediaTypeAttribute : Attribute
         this.AllowedAtRoot = AllowedAtRoot;
         this.Folder = Folder;
         this.Compositions = Compositions ?? [];
+        this.External = External;
     }
 
     /// <summary>Stable GUID for this media type. Leave unset — the code fixer will generate one.</summary>
@@ -39,4 +41,10 @@ public sealed class MediaTypeAttribute : Attribute
     public string? Folder { get; }
     /// <summary>GUIDs of existing Umbraco media types to add as compositions, e.g. the built-in Image type.</summary>
     public string[] Compositions { get; }
+    /// <summary>
+    /// Marks this as a stub for a media type that already exists in Umbraco (e.g. the built-in Image type) —
+    /// it is never created or updated by sync. Other media type classes may inherit from an External-marked
+    /// class to become a true child of that type in the Media Types tree.
+    /// </summary>
+    public bool External { get; }
 }

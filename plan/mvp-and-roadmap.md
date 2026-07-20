@@ -42,6 +42,7 @@ The smallest slice that proves **write class → start site → query it** end-t
 - **View scaffolding** — test project has `@inherits UmbracoViewPage<T>` views, `_Layout`, `_ViewImports`
 - **Media types** — `[MediaType]` attribute, `MediaTypeDefinition`, `MediaTypeSyncEngine`; scanner, data-type sync, and pre-flight validation all extended to cover media types
 - **Dictionary items** — `[DictionaryItem]` attribute (field-targeted, on `const string` fields using `nameof` so the C# identifier and the Umbraco `ItemKey` are always identical); `DictionaryItemDefinition`, `DictionaryItemSyncEngine`. Code owns keys/hierarchy only — nested static classes become real parent dictionary items, translations are never written by sync (backoffice/uSync-owned), and existing items are never touched or deleted. `PreFlightValidator` rejects duplicate `ItemKey`s across the whole scan (leaves and auto-created parents share one flat Umbraco namespace)
+- **Languages** — one enum per project carries `[Languages(DefaultLanguage: ...)]`; individual members carry `[Language(IsoCode: "...", Fallback = ..., IsMandatory = ...)]` and are skipped if unattributed (so the enum can hold a sentinel/`None` member or unrelated values). `LanguageSetDefinition`/`LanguageDefinition`, `LanguageSyncEngine`. The enum is the full language roster for the site (existing + new — `Fallback`/`DefaultLanguage` are compile-time-checked references to sibling members, boxed as `object` since an attribute can't be generic over "the enum it's applied to"). Sync is create-only: `GetAsync(isoCode)` is checked first and an existing language (including the built-in `en-US` from installation) is never updated, only ensured to exist; creation order recursively resolves `Fallback` dependencies first. `CultureName` is never authored — derived from `CultureInfo.GetCultureInfo(isoCode)` at creation time. `PreFlightValidator` rejects more than one `[Languages]`-marked enum, a `DefaultLanguage`/`Fallback` that isn't a `[Language]`-attributed sibling, duplicate ISO codes, and fallback cycles/self-references — all pure, offline reflection checks
 
 **Package location:** `~/Code/Consid/Consid.Umbraco.CodeFirst`
 **Test project:** `~/Code/Consid/TestProjects/UmbracoTCodeFIrst` (Umbraco 17.4.2, net10.0)
@@ -71,7 +72,7 @@ The smallest slice that proves **write class → start site → query it** end-t
 
 5. **Configured pickers with dynamic root** — the Tier-1 instance-reference solution (Q2).
 
-6. **Member types, languages.** (Media types ✓ done, Dictionary items ✓ done — see above.)
+6. **Member types.** (Media types ✓ done, Dictionary items ✓ done, Languages ✓ done — see above.)
 
 7. **Dictionary item coverage dashboard** — backoffice screen showing which keys are code-grounded vs.
    backoffice-only, and which have translations for which cultures. Split out of the dictionary items
