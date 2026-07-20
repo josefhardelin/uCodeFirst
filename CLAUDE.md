@@ -56,6 +56,11 @@ Compositions are modelled as C# interfaces marked with `[CompositionType]`. A do
 
 Backoffice folder paths (e.g. `"Pages/Articles"`) are specified on `[DocumentType(Folder: "...")]`. Folder GUIDs are derived deterministically via MD5 from `consid.codefirst:folder:<path>` so they are stable across restarts.
 
+## Verification
+
+Do not run the sample site (`dotnet run` in `samples/Basicv17`) to verify changes. Verify by building
+(`dotnet build`) and reading the code/generated behavior instead.
+
 ## Dev vs production
 
 The sync should only run in development. The recommended guard in the consuming site's `Program.cs`:
