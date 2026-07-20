@@ -203,9 +203,10 @@ This keeps production schema changes deliberate and uSync-controlled.
 - [x] Template linkage
 - [x] Code-first data type classes (`DataTypeBase` hierarchy, `[DataType]` attribute)
 - [x] Roslyn analyzer (UCF001 — build error on missing GUID, with code fixer)
-- [ ] Media types
+- [x] Media types
+- [x] Dictionary items (keys/hierarchy only — code owns structure, translations are backoffice/uSync-owned)
+- [ ] Dictionary item coverage dashboard (backoffice screen showing code-grounded vs. backoffice-only keys, translation status per culture)
 - [ ] Languages
-- [ ] Dictionary items
 - [ ] member types
 - [ ] Property type validation — UCF002 analyzer + `PreFlightValidator` check that the C# property return type matches the data type (e.g. `[TrueFalse]` must be on a `bool?`)
 - [ ] Source generator (removes explicit getter boilerplate)

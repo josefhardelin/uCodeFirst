@@ -203,6 +203,96 @@ internal sealed class DocumentTypeScanner
         return definitions;
     }
 
+    public IReadOnlyList<DictionaryItemDefinition> ScanDictionaryItems(IEnumerable<Assembly> assemblies)
+    {
+        var definitions = new List<DictionaryItemDefinition>();
+
+        var allTypes = assemblies
+            .SelectMany(a =>
+            {
+                try { return a.GetTypes(); }
+                catch (ReflectionTypeLoadException ex) { return ex.Types.OfType<Type>(); }
+            })
+            .ToList();
+
+        foreach (var type in allTypes.Where(t => t.IsClass))
+        {
+            foreach (var field in type.GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly))
+            {
+                if (!field.IsLiteral || field.FieldType != typeof(string))
+                    continue;
+                if (!field.IsDefined(typeof(DictionaryItemAttribute)))
+                    continue;
+
+                var itemKey = (string)field.GetRawConstantValue()!;
+                definitions.Add(new DictionaryItemDefinition(field, itemKey, GetParentChain(type)));
+            }
+        }
+
+        return definitions;
+    }
+
+    // Nested static classes become real parent dictionary items; the outermost (non-nested)
+    // declaring type is treated as pure C#-side grouping and never becomes an item itself.
+    private static IReadOnlyList<Type> GetParentChain(Type declaringType)
+    {
+        var chain = new List<Type>();
+        var current = declaringType;
+
+        while (current.IsNested)
+        {
+            chain.Insert(0, current);
+            current = current.DeclaringType!;
+        }
+
+        return chain;
+    }
+
+    public IReadOnlyList<LanguageSetDefinition> ScanLanguages(IEnumerable<Assembly> assemblies)
+    {
+        var definitions = new List<LanguageSetDefinition>();
+
+        var allTypes = assemblies
+            .SelectMany(a =>
+            {
+                try { return a.GetTypes(); }
+                catch (ReflectionTypeLoadException ex) { return ex.Types.OfType<Type>(); }
+            })
+            .ToList();
+
+        foreach (var enumType in allTypes.Where(t => t.IsEnum && t.IsDefined(typeof(LanguagesAttribute))))
+        {
+            var setAttr = enumType.GetCustomAttribute<LanguagesAttribute>()!;
+            var defaultMember = ResolveEnumMember(enumType, setAttr.DefaultLanguage);
+
+            var languages = new List<LanguageDefinition>();
+            foreach (var field in enumType.GetFields(BindingFlags.Public | BindingFlags.Static))
+            {
+                var langAttr = field.GetCustomAttribute<LanguageAttribute>();
+                if (langAttr is null)
+                    continue;
+
+                var fallback = ResolveEnumMember(enumType, langAttr.Fallback);
+                languages.Add(new LanguageDefinition(field, langAttr.IsoCode, fallback, langAttr.IsMandatory));
+            }
+
+            definitions.Add(new LanguageSetDefinition(enumType, defaultMember, languages));
+        }
+
+        return definitions;
+    }
+
+    private static FieldInfo? ResolveEnumMember(Type enumType, object? boxedValue)
+    {
+        if (boxedValue is null || boxedValue.GetType() != enumType)
+            return null;
+
+        var targetValue = Convert.ToInt64(boxedValue);
+        return enumType
+            .GetFields(BindingFlags.Public | BindingFlags.Static)
+            .FirstOrDefault(f => Convert.ToInt64(f.GetRawConstantValue()) == targetValue);
+    }
+
     internal static string ToAlias(string name) =>
         name.Length == 0 ? name : char.ToLowerInvariant(name[0]) + name[1..];
 }

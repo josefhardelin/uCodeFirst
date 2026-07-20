@@ -40,6 +40,8 @@ The smallest slice that proves **write class → start site → query it** end-t
 - **Folder support** — `Folder` param on `[DocumentType]`; `EntityContainer` hierarchy with deterministic GUIDs (MD5 of path) for idempotency
 - **Template linking** — `DefaultTemplate` param on `[DocumentType]`; looks up template by alias via `ITemplateService`, creates DB entry if missing, wires `AllowedTemplates` + `DefaultTemplateId`
 - **View scaffolding** — test project has `@inherits UmbracoViewPage<T>` views, `_Layout`, `_ViewImports`
+- **Media types** — `[MediaType]` attribute, `MediaTypeDefinition`, `MediaTypeSyncEngine`; scanner, data-type sync, and pre-flight validation all extended to cover media types
+- **Dictionary items** — `[DictionaryItem]` attribute (field-targeted, on `const string` fields using `nameof` so the C# identifier and the Umbraco `ItemKey` are always identical); `DictionaryItemDefinition`, `DictionaryItemSyncEngine`. Code owns keys/hierarchy only — nested static classes become real parent dictionary items, translations are never written by sync (backoffice/uSync-owned), and existing items are never touched or deleted. `PreFlightValidator` rejects duplicate `ItemKey`s across the whole scan (leaves and auto-created parents share one flat Umbraco namespace)
 
 **Package location:** `~/Code/Consid/Consid.Umbraco.CodeFirst`
 **Test project:** `~/Code/Consid/TestProjects/UmbracoTCodeFIrst` (Umbraco 17.4.2, net10.0)
@@ -48,25 +50,43 @@ The smallest slice that proves **write class → start site → query it** end-t
 
 ## Roadmap — deferred, in priority order
 
-1. **Element types + Block List + Block Grid** — the high-value vision; nested content patterns.
+1. **Switch `tests/uCodeFirst.Tests` from xUnit to NUnit** — future-proofing move so the test project can
+   later host Umbraco's own SQLite-backed integration tests (`Umbraco.Cms.Tests.Integration`) without a
+   split framework. Umbraco's test infra (`UmbracoIntegrationTest`, builders) is NUnit-only — confirmed
+   via Umbraco-CMS `release-17.5.3` source and uSync's own v17 test suite, which uses NUnit for exactly
+   this reason. See `docs/research/testing-strategy.md`.
+
+2. **Unit tests for `DocumentTypeScanner` and `PreFlightValidator`** — both are pure logic with zero
+   Umbraco dependency (plain reflection over records), so they're testable today with in-memory fixture
+   assemblies and no mocking. Goal: replace the "boot Basicv17, click through the backoffice" verification
+   loop with a fast local test run for scanner/validator behavior. See `docs/research/testing-strategy.md`
+   for sketches (duplicate alias/GUID, dangling `[AllowedChildren]` refs, composition property exclusion,
+   dictionary parent-chain resolution).
+
+3. **Element types + Block List + Block Grid** — the high-value vision; nested content patterns.
    Needs: `[ElementType]` attribute, Block List/Grid data type config, GUID cross-refs to element types.
 
-2. **Compositions & inheritance** — C# interfaces → Umbraco compositions (mixins); base class → doctype
+4. **Compositions & inheritance** — C# interfaces → Umbraco compositions (mixins); base class → doctype
    inheritance (single parent). Validation must check property-alias collisions across composed types.
 
-3. **Configured pickers with dynamic root** — the Tier-1 instance-reference solution (Q2).
+5. **Configured pickers with dynamic root** — the Tier-1 instance-reference solution (Q2).
 
-4. **Media types, member types, dictionary items, languages.**
+6. **Member types, languages.** (Media types ✓ done, Dictionary items ✓ done — see above.)
 
-5. **Content seeding** — deterministic-GUID singleton nodes (Tier-2 picker answer, Q2).
+7. **Dictionary item coverage dashboard** — backoffice screen showing which keys are code-grounded vs.
+   backoffice-only, and which have translations for which cultures. Split out of the dictionary items
+   work above; needs its own scoping (Umbraco dashboards are a Lit/web-component + package-manifest
+   registration, not part of the sync pipeline).
 
-6. **Variants** — culture/segment variation.
+8. **Content seeding** — deterministic-GUID singleton nodes (Tier-2 picker answer, Q2).
 
-7. **Native production sync safety** — dry-run/preview, destructive-change gating (the parts uSync covers
-   for us in the MVP).
+9. **Variants** — culture/segment variation.
 
-8. **Source generator** — removes `_publishedValueFallback` field and `Value<T>` getter boilerplate.
-   Nice to have, but the manual pattern is workable and a generator adds build-time complexity.
+10. **Native production sync safety** — dry-run/preview, destructive-change gating (the parts uSync covers
+    for us in the MVP).
+
+11. **Source generator** — removes `_publishedValueFallback` field and `Value<T>` getter boilerplate.
+    Nice to have, but the manual pattern is workable and a generator adds build-time complexity.
 
 ---
 
@@ -132,6 +152,32 @@ public partial class StartPage : PublishedContentModel
 
 **Note on `Value<T>`:** extension method in `Umbraco.Extensions`; requires `IPublishedValueFallback` as
 explicit second parameter. Base class stores it `private`, so subclasses must capture it themselves.
+
+**Dictionary items:**
+
+```csharp
+public static class DictionaryKeys
+{
+    public static class Buttons               // nested static class = real parent DictionaryItem
+    {
+        [DictionaryItem]
+        public const string Submit = nameof(Submit);   // ItemKey = "Submit"
+
+        [DictionaryItem]
+        public const string Cancel = nameof(Cancel);
+    }
+
+    [DictionaryItem]
+    public const string SiteTitle = nameof(SiteTitle); // root-level item, no nesting required
+}
+
+// Razor
+@Umbraco.GetDictionaryValue(DictionaryKeys.Buttons.Submit)
+```
+
+The `nameof` value keeps the C# identifier and the Umbraco `ItemKey` identical (rename-safe, no
+string literal to keep in sync). Sync only creates missing keys — it never writes translation
+values and never touches an existing item.
 
 ---
 

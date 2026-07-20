@@ -20,4 +20,6 @@
     {
         @await Html.GetBlockGridHtmlAsync(Model, "contentGrid")
     }
+
+    <button type="submit">@Umbraco.GetDictionaryValue(DictionaryKeys.Buttons.Submit)</button>
 </main>

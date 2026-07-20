@@ -12,6 +12,8 @@ internal sealed class CodeFirstSyncService
     private readonly DataTypeSyncEngine _dataTypeSyncEngine;
     private readonly ContentTypeSyncEngine _contentTypeSyncEngine;
     private readonly MediaTypeSyncEngine _mediaTypeSyncEngine;
+    private readonly DictionaryItemSyncEngine _dictionaryItemSyncEngine;
+    private readonly LanguageSyncEngine _languageSyncEngine;
     private readonly ILogger<CodeFirstSyncService> _logger;
 
     public CodeFirstSyncService(
@@ -20,6 +22,8 @@ internal sealed class CodeFirstSyncService
         DataTypeSyncEngine dataTypeSyncEngine,
         ContentTypeSyncEngine contentTypeSyncEngine,
         MediaTypeSyncEngine mediaTypeSyncEngine,
+        DictionaryItemSyncEngine dictionaryItemSyncEngine,
+        LanguageSyncEngine languageSyncEngine,
         ILogger<CodeFirstSyncService> logger)
     {
         _scanner = scanner;
@@ -27,6 +31,8 @@ internal sealed class CodeFirstSyncService
         _dataTypeSyncEngine = dataTypeSyncEngine;
         _contentTypeSyncEngine = contentTypeSyncEngine;
         _mediaTypeSyncEngine = mediaTypeSyncEngine;
+        _dictionaryItemSyncEngine = dictionaryItemSyncEngine;
+        _languageSyncEngine = languageSyncEngine;
         _logger = logger;
     }
 
@@ -36,17 +42,20 @@ internal sealed class CodeFirstSyncService
 
         var definitions = _scanner.Scan(assemblyList);
         var mediaDefinitions = _scanner.ScanMediaTypes(assemblyList);
+        var dictionaryDefinitions = _scanner.ScanDictionaryItems(assemblyList);
+        var languageSetDefinitions = _scanner.ScanLanguages(assemblyList);
 
-        if (definitions.Count == 0 && mediaDefinitions.Count == 0)
+        if (definitions.Count == 0 && mediaDefinitions.Count == 0 && dictionaryDefinitions.Count == 0 && languageSetDefinitions.Count == 0)
         {
-            _logger.LogDebug("Code-first: no [DocumentType] or [MediaType] classes found.");
+            _logger.LogDebug("Code-first: no [DocumentType], [MediaType], [DictionaryItem], or [Languages] members found.");
             return;
         }
 
-        _logger.LogInformation("Code-first: discovered {DocCount} document type(s), {MediaCount} media type(s).",
-            definitions.Count, mediaDefinitions.Count);
+        _logger.LogInformation(
+            "Code-first: discovered {DocCount} document type(s), {MediaCount} media type(s), {DictCount} dictionary item(s), {LangCount} language(s).",
+            definitions.Count, mediaDefinitions.Count, dictionaryDefinitions.Count, languageSetDefinitions.Sum(l => l.Languages.Count));
 
-        var errors = _validator.Validate(definitions, mediaDefinitions);
+        var errors = _validator.Validate(definitions, mediaDefinitions, dictionaryDefinitions, languageSetDefinitions);
         if (errors.Count > 0)
         {
             var bullet = string.Join("\n  - ", errors);
@@ -65,6 +74,12 @@ internal sealed class CodeFirstSyncService
             var mediaDataTypeByKey = await _dataTypeSyncEngine.EnsureMediaDataTypesAsync(mediaDefinitions, ct);
             await _mediaTypeSyncEngine.SyncAsync(mediaDefinitions, mediaDataTypeByKey, ct);
         }
+
+        if (dictionaryDefinitions.Count > 0)
+            await _dictionaryItemSyncEngine.SyncAsync(dictionaryDefinitions, ct);
+
+        if (languageSetDefinitions.Count == 1)
+            await _languageSyncEngine.SyncAsync(languageSetDefinitions[0], ct);
 
         _logger.LogInformation("Code-first sync complete.");
     }
