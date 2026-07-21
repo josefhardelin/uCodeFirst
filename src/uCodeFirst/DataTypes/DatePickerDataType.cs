@@ -5,6 +5,6 @@ namespace uCodeFirst.DataTypes;
 
 public abstract class DatePickerDataType : DataTypeBase
 {
-    internal override EditorRecipe BuildRecipe(Guid key, string name) =>
+    public override EditorRecipe BuildRecipe(Guid key, string name) =>
         new(key, name, "Umbraco.DateTime", "Umb.PropertyEditorUi.DatePicker", new Dictionary<string, object>(), ValueStorageType.Date);
 }

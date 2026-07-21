@@ -18,4 +18,8 @@
                       ReferenceOutputAssembly="false" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="uCodeFirst.Tests" />
+  </ItemGroup>
+
 </Project>

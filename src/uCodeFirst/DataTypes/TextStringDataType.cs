@@ -6,7 +6,7 @@ public abstract class TextStringDataType : DataTypeBase
 {
     public virtual int MaxLength { get; } = 0;
 
-    internal override EditorRecipe BuildRecipe(Guid key, string name)
+    public override EditorRecipe BuildRecipe(Guid key, string name)
     {
         IDictionary<string, object> config = MaxLength > 0
             ? new Dictionary<string, object> { ["maxChars"] = MaxLength }

@@ -12,7 +12,8 @@ public sealed class MediaTypeAttribute : Attribute
         bool AllowedAtRoot = false,
         string? Folder = null,
         string[]? Compositions = null,
-        bool External = false)
+        bool External = false,
+        bool IsContainer = false)
     {
         this.Name = Name;
         this.Alias = Alias;
@@ -23,6 +24,7 @@ public sealed class MediaTypeAttribute : Attribute
         this.Folder = Folder;
         this.Compositions = Compositions ?? [];
         this.External = External;
+        this.IsContainer = IsContainer;
     }
 
     /// <summary>Stable GUID for this media type. Leave unset — the code fixer will generate one.</summary>
@@ -47,4 +49,6 @@ public sealed class MediaTypeAttribute : Attribute
     /// class to become a true child of that type in the Media Types tree.
     /// </summary>
     public bool External { get; }
+    /// <summary>When true, this media type's children are shown in the backoffice as a sortable/filterable list view instead of a tree.</summary>
+    public bool IsContainer { get; }
 }

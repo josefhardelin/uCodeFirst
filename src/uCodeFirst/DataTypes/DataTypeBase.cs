@@ -11,11 +11,12 @@ public abstract class DataTypeBase : Attribute
     public string? Alias { get; set; }
     public bool Mandatory { get; set; }
     public string? Description { get; set; }
+    public bool VariesByCulture { get; set; } = false;
 
     internal DataTypeAttribute GetDescriptor() =>
         GetType().GetCustomAttribute<DataTypeAttribute>()
         ?? throw new InvalidOperationException(
             $"Data type class '{GetType().Name}' is missing a [DataType] attribute.");
 
-    internal abstract EditorRecipe BuildRecipe(Guid key, string name);
+    public abstract EditorRecipe BuildRecipe(Guid key, string name);
 }

@@ -21,7 +21,7 @@ public abstract class BlockListDataType : DataTypeBase
     // Editor appearance
     public virtual string? EditorWidth { get; } = null;
 
-    internal override EditorRecipe BuildRecipe(Guid key, string name)
+    public override EditorRecipe BuildRecipe(Guid key, string name)
     {
         var blocks = Blocks.Select(BuildBlockConfig).Cast<object>().ToList();
 

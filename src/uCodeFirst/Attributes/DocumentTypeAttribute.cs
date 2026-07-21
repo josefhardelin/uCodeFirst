@@ -11,7 +11,9 @@ public sealed class DocumentTypeAttribute : Attribute
         string? Description = null,
         bool AllowedAtRoot = false,
         string? Folder = null,
-        string? DefaultTemplate = null)
+        string? DefaultTemplate = null,
+        bool VariesByCulture = false,
+        bool IsContainer = false)
     {
         this.Name = Name;
         this.Alias = Alias;
@@ -21,6 +23,8 @@ public sealed class DocumentTypeAttribute : Attribute
         this.AllowedAtRoot = AllowedAtRoot;
         this.Folder = Folder;
         this.DefaultTemplate = DefaultTemplate;
+        this.VariesByCulture = VariesByCulture;
+        this.IsContainer = IsContainer;
     }
 
     /// <summary>Stable GUID for this document type. Leave unset — the code fixer will generate one.</summary>
@@ -39,4 +43,8 @@ public sealed class DocumentTypeAttribute : Attribute
     public string? Folder { get; }
     /// <summary>Template alias to link as the default template, e.g. "startPage". Null means no template.</summary>
     public string? DefaultTemplate { get; }
+    /// <summary>Whether this content type varies by culture. When true, properties may opt in to per-culture values via their own VariesByCulture flag.</summary>
+    public bool VariesByCulture { get; }
+    /// <summary>When true, this content type's children are shown in the backoffice as a sortable/filterable list view instead of a tree.</summary>
+    public bool IsContainer { get; }
 }

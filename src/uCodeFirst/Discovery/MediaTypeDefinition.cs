@@ -13,4 +13,5 @@ internal sealed record MediaTypeDefinition(
     IReadOnlyList<Type> AllowedChildTypes,
     IReadOnlyList<PropertyDefinition> Properties,
     IReadOnlyList<Guid> CompositionKeys,
-    Guid? ParentKey);
+    Guid? ParentKey,
+    bool IsContainer);

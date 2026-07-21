@@ -18,6 +18,9 @@ namespace Basicv17.Models.Pages;
     AllowedAtRoot: true,
     Folder: "Pages",
     DefaultTemplate: "startPage",
+    // News articles live directly under the start page — show them as a sortable/filterable
+    // list view in the backoffice instead of a tree.
+    IsContainer: true,
     Guid = "a1b2c3d4-e5f6-7890-abcd-ef1234567890")]
 [AllowedChildren(typeof(NewsArticle))]
 [PublishedModel("startPage")]

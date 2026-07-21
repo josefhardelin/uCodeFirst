@@ -5,6 +5,6 @@ namespace uCodeFirst.DataTypes;
 
 public abstract class NumericDataType : DataTypeBase
 {
-    internal override EditorRecipe BuildRecipe(Guid key, string name) =>
+    public override EditorRecipe BuildRecipe(Guid key, string name) =>
         new(key, name, "Umbraco.Integer", "Umb.PropertyEditorUi.Integer", new Dictionary<string, object>(), ValueStorageType.Integer);
 }

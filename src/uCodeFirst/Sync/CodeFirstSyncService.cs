@@ -14,6 +14,7 @@ internal sealed class CodeFirstSyncService
     private readonly MediaTypeSyncEngine _mediaTypeSyncEngine;
     private readonly DictionaryItemSyncEngine _dictionaryItemSyncEngine;
     private readonly LanguageSyncEngine _languageSyncEngine;
+    private readonly TemplateSyncEngine _templateSyncEngine;
     private readonly ILogger<CodeFirstSyncService> _logger;
 
     public CodeFirstSyncService(
@@ -24,6 +25,7 @@ internal sealed class CodeFirstSyncService
         MediaTypeSyncEngine mediaTypeSyncEngine,
         DictionaryItemSyncEngine dictionaryItemSyncEngine,
         LanguageSyncEngine languageSyncEngine,
+        TemplateSyncEngine templateSyncEngine,
         ILogger<CodeFirstSyncService> logger)
     {
         _scanner = scanner;
@@ -33,6 +35,7 @@ internal sealed class CodeFirstSyncService
         _mediaTypeSyncEngine = mediaTypeSyncEngine;
         _dictionaryItemSyncEngine = dictionaryItemSyncEngine;
         _languageSyncEngine = languageSyncEngine;
+        _templateSyncEngine = templateSyncEngine;
         _logger = logger;
     }
 
@@ -44,24 +47,28 @@ internal sealed class CodeFirstSyncService
         var mediaDefinitions = _scanner.ScanMediaTypes(assemblyList);
         var dictionaryDefinitions = _scanner.ScanDictionaryItems(assemblyList);
         var languageSetDefinitions = _scanner.ScanLanguages(assemblyList);
+        var templateDefinitions = _scanner.ScanTemplates(assemblyList);
 
-        if (definitions.Count == 0 && mediaDefinitions.Count == 0 && dictionaryDefinitions.Count == 0 && languageSetDefinitions.Count == 0)
+        if (definitions.Count == 0 && mediaDefinitions.Count == 0 && dictionaryDefinitions.Count == 0 && languageSetDefinitions.Count == 0 && templateDefinitions.Count == 0)
         {
-            _logger.LogDebug("Code-first: no [DocumentType], [MediaType], [DictionaryItem], or [Languages] members found.");
+            _logger.LogDebug("Code-first: no [DocumentType], [MediaType], [DictionaryItem], [Languages], or [Template] members found.");
             return;
         }
 
         _logger.LogInformation(
-            "Code-first: discovered {DocCount} document type(s), {MediaCount} media type(s), {DictCount} dictionary item(s), {LangCount} language(s).",
-            definitions.Count, mediaDefinitions.Count, dictionaryDefinitions.Count, languageSetDefinitions.Sum(l => l.Languages.Count));
+            "Code-first: discovered {DocCount} document type(s), {MediaCount} media type(s), {DictCount} dictionary item(s), {LangCount} language(s), {TemplateCount} template(s).",
+            definitions.Count, mediaDefinitions.Count, dictionaryDefinitions.Count, languageSetDefinitions.Sum(l => l.Languages.Count), templateDefinitions.Count);
 
-        var errors = _validator.Validate(definitions, mediaDefinitions, dictionaryDefinitions, languageSetDefinitions);
+        var errors = _validator.Validate(definitions, mediaDefinitions, dictionaryDefinitions, languageSetDefinitions, templateDefinitions);
         if (errors.Count > 0)
         {
             var bullet = string.Join("\n  - ", errors);
             throw new InvalidOperationException(
                 $"Code-first pre-flight validation failed with {errors.Count} error(s):\n  - {bullet}");
         }
+
+        if (templateDefinitions.Count > 0)
+            await _templateSyncEngine.SyncAsync(templateDefinitions, ct);
 
         if (definitions.Count > 0)
         {

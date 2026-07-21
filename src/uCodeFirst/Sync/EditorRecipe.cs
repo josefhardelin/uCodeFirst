@@ -2,7 +2,7 @@ using Umbraco.Cms.Core.Models;
 
 namespace uCodeFirst.Sync;
 
-internal sealed record EditorRecipe(
+public sealed record EditorRecipe(
     Guid Key,
     string Name,
     string EditorAlias,

@@ -16,7 +16,9 @@ internal sealed record DocumentTypeDefinition(
     string? DefaultTemplate,
     IReadOnlyList<Type> AllowedChildTypes,
     IReadOnlyList<PropertyDefinition> Properties,
-    IReadOnlyList<Guid> CompositionKeys);
+    IReadOnlyList<Guid> CompositionKeys,
+    bool VariesByCulture,
+    bool IsContainer);
 
 internal sealed record PropertyDefinition(
     string Alias,
@@ -25,4 +27,5 @@ internal sealed record PropertyDefinition(
     int SortOrder,
     bool Mandatory,
     string? Description,
-    DataTypeBase DataType);
+    DataTypeBase DataType,
+    bool VariesByCulture);

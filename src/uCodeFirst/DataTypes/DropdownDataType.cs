@@ -7,7 +7,7 @@ public abstract class DropdownDataType : DataTypeBase
     public virtual bool AllowMultiple { get; } = false;
     public virtual string[] Options { get; } = [];
 
-    internal override EditorRecipe BuildRecipe(Guid key, string name)
+    public override EditorRecipe BuildRecipe(Guid key, string name)
     {
         IDictionary<string, object> config = new Dictionary<string, object>
         {

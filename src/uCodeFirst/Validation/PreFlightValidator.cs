@@ -11,7 +11,8 @@ internal sealed class PreFlightValidator
         IReadOnlyList<DocumentTypeDefinition> definitions,
         IReadOnlyList<MediaTypeDefinition>? mediaDefinitions = null,
         IReadOnlyList<DictionaryItemDefinition>? dictionaryDefinitions = null,
-        IReadOnlyList<LanguageSetDefinition>? languageSetDefinitions = null)
+        IReadOnlyList<LanguageSetDefinition>? languageSetDefinitions = null,
+        IReadOnlyList<TemplateDefinition>? templateDefinitions = null)
     {
         var errors = new List<string>();
         var aliasByType = new Dictionary<string, Type>(StringComparer.OrdinalIgnoreCase);
@@ -49,6 +50,19 @@ internal sealed class PreFlightValidator
                     errors.Add($"[AllowedChildren] on '{def.ClrType.FullName}' references '{childType.FullName}' which has no [DocumentType] attribute.");
                 else if (!scannedKeys.Contains(childAttr.Key))
                     errors.Add($"[AllowedChildren] on '{def.ClrType.FullName}' references '{childType.FullName}' which was not discovered in the scanned assembly set.");
+            }
+        }
+
+        // Validate culture-varying properties only exist on culture-varying content/element types
+        foreach (var def in definitions)
+        {
+            if (def.VariesByCulture)
+                continue;
+
+            foreach (var prop in def.Properties)
+            {
+                if (prop.VariesByCulture)
+                    errors.Add($"Property '{prop.Alias}' on '{def.ClrType.FullName}' has VariesByCulture: true, but '{def.ClrType.FullName}' has VariesByCulture: false.");
             }
         }
 
@@ -108,6 +122,9 @@ internal sealed class PreFlightValidator
         if (languageSetDefinitions is { Count: > 0 })
             ValidateLanguages(languageSetDefinitions, errors);
 
+        if (templateDefinitions is { Count: > 0 })
+            ValidateTemplates(templateDefinitions, errors);
+
         return errors;
     }
 
@@ -165,6 +182,46 @@ internal sealed class PreFlightValidator
                 }
 
                 current = currentLang.Fallback;
+            }
+        }
+    }
+
+    // Unlike [Languages], any number of enums may carry [Template]-decorated members, so there's
+    // no "only one enum allowed" check here. Master cross-references are boxed `object` on the
+    // attribute (an enum type can't otherwise reference "itself" as a parameter type), so they're
+    // validated here against the declaring enum rather than by the compiler.
+    private static void ValidateTemplates(IReadOnlyList<TemplateDefinition> definitions, List<string> errors)
+    {
+        var memberByAlias = new Dictionary<string, FieldInfo>(StringComparer.OrdinalIgnoreCase);
+        foreach (var def in definitions)
+        {
+            if (memberByAlias.TryGetValue(def.Alias, out var conflicting))
+                errors.Add($"Duplicate template alias '{def.Alias}': '{def.Member.DeclaringType?.FullName}.{def.Member.Name}' and '{conflicting.DeclaringType?.FullName}.{conflicting.Name}'.");
+            else
+                memberByAlias[def.Alias] = def.Member;
+
+            var rawMaster = def.Member.GetCustomAttribute<TemplateAttribute>()!.Master;
+            if (rawMaster is not null && def.Master is null)
+                errors.Add($"[Template] on '{def.Member.DeclaringType?.FullName}.{def.Member.Name}' has Master '{rawMaster}' which is not a member of the same enum.");
+            else if (def.Master is not null && !def.Master.IsDefined(typeof(TemplateAttribute)))
+                errors.Add($"[Template] on '{def.Member.DeclaringType?.FullName}.{def.Member.Name}' has Master '{def.Master.Name}' which has no [Template] attribute.");
+        }
+
+        var templateByMember = definitions.ToDictionary(d => d.Member);
+        foreach (var def in definitions)
+        {
+            var visited = new HashSet<FieldInfo> { def.Member };
+            var current = def.Master;
+
+            while (current is not null && templateByMember.TryGetValue(current, out var currentDef))
+            {
+                if (!visited.Add(current))
+                {
+                    errors.Add($"[Template] master chain starting at '{def.Member.DeclaringType?.FullName}.{def.Member.Name}' contains a cycle.");
+                    break;
+                }
+
+                current = currentDef.Master;
             }
         }
     }

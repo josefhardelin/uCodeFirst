@@ -1,4 +1,4 @@
-# Consid.Umbraco.CodeFirst
+# uCodeFirst
 
 Code-first schema authoring for Umbraco 17+. Define document types as C# classes; the package syncs them into the Umbraco database on startup — no backoffice clicking, no generate step.
 
@@ -33,14 +33,15 @@ In your Umbraco site's `.csproj`:
 
 ```xml
 <ItemGroup>
-  <ProjectReference Include="path/to/Consid.Umbraco.CodeFirst/src/Consid.Umbraco.CodeFirst/Consid.Umbraco.CodeFirst.csproj" />
+  <ProjectReference Include="path/to/uCodeFirst/src/uCodeFirst/uCodeFirst.csproj" />
 </ItemGroup>
 ```
 
 Use a relative path or an absolute path depending on your repo layout. For example, if both repos sit side-by-side:
 
 ```xml
-<ProjectReference Include="../../Consid.Umbraco.CodeFirst/src/Consid.Umbraco.CodeFirst/Consid.Umbraco.CodeFirst.csproj" />
+<ProjectReference Include="../../uCodeFirst/src/uCodeFirst/uCodeFirst.csproj" />
+```
 ```
 
 ### 2. Disable ModelsBuilder
@@ -81,7 +82,7 @@ builder.CreateUmbracoBuilder()
 ### Minimal example
 
 ```csharp
-using Consid.Umbraco.CodeFirst.Attributes;
+using uCodeFirst.Attributes;
 using Umbraco.Cms.Core.Models.PublishedContent;
 using Umbraco.Cms.Core.Strings;
 using Umbraco.Cms.Web.Common.PublishedModels;

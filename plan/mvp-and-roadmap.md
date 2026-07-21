@@ -57,12 +57,16 @@ The smallest slice that proves **write class → start site → query it** end-t
    via Umbraco-CMS `release-17.5.3` source and uSync's own v17 test suite, which uses NUnit for exactly
    this reason. See `docs/research/testing-strategy.md`.
 
-2. **Unit tests for `DocumentTypeScanner` and `PreFlightValidator`** — both are pure logic with zero
-   Umbraco dependency (plain reflection over records), so they're testable today with in-memory fixture
-   assemblies and no mocking. Goal: replace the "boot Basicv17, click through the backoffice" verification
-   loop with a fast local test run for scanner/validator behavior. See `docs/research/testing-strategy.md`
-   for sketches (duplicate alias/GUID, dangling `[AllowedChildren]` refs, composition property exclusion,
-   dictionary parent-chain resolution).
+2. **Unit tests for `DocumentTypeScanner`, `PreFlightValidator`, and the sync engines** — both scanner and
+   validator are pure logic with zero Umbraco dependency (plain reflection over records), so they're
+   testable today with in-memory fixture assemblies and no mocking. Goal: replace the "boot Basicv17,
+   click through the backoffice" verification loop with a fast local test run for scanner/validator
+   behavior. See `docs/research/testing-strategy.md` for sketches (duplicate alias/GUID, dangling
+   `[AllowedChildren]` refs, composition property exclusion, dictionary parent-chain resolution). Focused
+   validator/engine tests now exist for culture variance, template cycles, and language update-on-drift
+   (added alongside those features), but scanner coverage and broader sync-engine coverage
+   (`ContentTypeSyncEngine`, `MediaTypeSyncEngine`, `DataTypeSyncEngine`) are still open — see
+   `docs/research/ucodefirst-vs-v17-usync-status.md` gap #11.
 
 3. **Element types + Block List + Block Grid** — the high-value vision; nested content patterns.
    Needs: `[ElementType]` attribute, Block List/Grid data type config, GUID cross-refs to element types.
@@ -72,7 +76,11 @@ The smallest slice that proves **write class → start site → query it** end-t
 
 5. **Configured pickers with dynamic root** — the Tier-1 instance-reference solution (Q2).
 
-6. **Member types.** (Media types ✓ done, Dictionary items ✓ done, Languages ✓ done — see above.)
+6. **Member types & relation types.** (Media types ✓ done, Dictionary items ✓ done, Languages ✓ done — see
+   above.) No export evidence of anything custom to reproduce (built-in `Member` type + 2 Umbraco
+   Forms/Members-ecosystem relation types only), but member types are a different domain (member/auth
+   schema, not content schema) that would need its own design pass if a real need shows up. See
+   `docs/research/ucodefirst-vs-v17-usync-status.md` gap #10.
 
 7. **Dictionary item coverage dashboard** — backoffice screen showing which keys are code-grounded vs.
    backoffice-only, and which have translations for which cultures. Split out of the dictionary items
@@ -81,12 +89,18 @@ The smallest slice that proves **write class → start site → query it** end-t
 
 8. **Content seeding** — deterministic-GUID singleton nodes (Tier-2 picker answer, Q2).
 
-9. **Variants** — culture/segment variation.
+9. **Segment variance** — culture variance shipped (`VariesByCulture` on `[DocumentType]`/`[ElementType]`
+   and per-property on `DataTypeBase`), segment/culture+segment variation is still open.
 
-10. **Native production sync safety** — dry-run/preview, destructive-change gating (the parts uSync covers
+10. **HistoryCleanup policy** — `PreventCleanup`/`KeepAllVersionsNewerThanDays`/`KeepLatestVersionPerDayForDays`
+    on content types. No export evidence of anyone customizing it (every content type in the reference
+    export is at Umbraco's default), so not urgent — revisit if a concrete need appears. See
+    `docs/research/ucodefirst-vs-v17-usync-status.md` gap #6.
+
+11. **Native production sync safety** — dry-run/preview, destructive-change gating (the parts uSync covers
     for us in the MVP).
 
-11. **Source generator** — removes `_publishedValueFallback` field and `Value<T>` getter boilerplate.
+12. **Source generator** — removes `_publishedValueFallback` field and `Value<T>` getter boilerplate.
     Nice to have, but the manual pattern is workable and a generator adds build-time complexity.
 
 ---

@@ -193,7 +193,9 @@ internal sealed class ContentTypeSyncEngine
             Icon = BuildIconString(def.Icon, def.Color),
             Description = def.Description ?? string.Empty,
             AllowedAsRoot = def.AllowedAtRoot,
-            IsElement = def.IsElement
+            IsElement = def.IsElement,
+            Variations = def.VariesByCulture ? ContentVariation.Culture : ContentVariation.Nothing,
+            ListView = def.IsContainer ? Constants.DataTypes.Guids.ListViewContentGuid : null
         };
 
         ApplyProperties(contentType, def, dataTypeByKey);
@@ -218,6 +220,8 @@ internal sealed class ContentTypeSyncEngine
         existing.Description = def.Description ?? string.Empty;
         existing.AllowedAsRoot = def.AllowedAtRoot;
         existing.IsElement = def.IsElement;
+        existing.Variations = def.VariesByCulture ? ContentVariation.Culture : ContentVariation.Nothing;
+        existing.ListView = def.IsContainer ? Constants.DataTypes.Guids.ListViewContentGuid : null;
 
         // Move to correct folder if it has changed
         var targetParentId = def.Folder is not null && folderIdByPath.TryGetValue(def.Folder, out var fId) ? fId : -1;
@@ -303,7 +307,8 @@ internal sealed class ContentTypeSyncEngine
                     Name = prop.Name,
                     Mandatory = prop.Mandatory,
                     Description = prop.Description ?? string.Empty,
-                    SortOrder = prop.SortOrder
+                    SortOrder = prop.SortOrder,
+                    Variations = prop.VariesByCulture ? ContentVariation.Culture : ContentVariation.Nothing
                 };
 
                 contentType.AddPropertyType(propertyType, groupAlias, group.Key);
@@ -363,6 +368,7 @@ internal sealed class ContentTypeSyncEngine
                     existingProp.Description = prop.Description ?? string.Empty;
                     existingProp.SortOrder = prop.SortOrder;
                     existingProp.DataTypeKey = dataType.Key;
+                    existingProp.Variations = prop.VariesByCulture ? ContentVariation.Culture : ContentVariation.Nothing;
                 }
                 else
                 {
@@ -371,7 +377,8 @@ internal sealed class ContentTypeSyncEngine
                         Name = prop.Name,
                         Mandatory = prop.Mandatory,
                         Description = prop.Description ?? string.Empty,
-                        SortOrder = prop.SortOrder
+                        SortOrder = prop.SortOrder,
+                        Variations = prop.VariesByCulture ? ContentVariation.Culture : ContentVariation.Nothing
                     };
                     contentType.AddPropertyType(propertyType, groupAlias, group.Key);
                 }

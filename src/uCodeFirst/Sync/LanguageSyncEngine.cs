@@ -8,9 +8,9 @@ using Umbraco.Cms.Core.Services;
 
 namespace uCodeFirst.Sync;
 
-// Code owns which languages exist and their default/mandatory/fallback config at creation time
-// only. Additive-only, like the dictionary item engine: an already-existing language (including
-// the built-in default from installation) is never updated, only ensured to exist.
+// Code owns which languages exist, and keeps their mandatory/fallback config in sync on every
+// run. IsDefault is only ever set at creation time — changing which language is the site's
+// default is a more disruptive operation than fallback/mandatory and is left to the backoffice.
 internal sealed class LanguageSyncEngine
 {
     private readonly ILanguageService _languageService;
@@ -50,7 +50,10 @@ internal sealed class LanguageSyncEngine
 
         var existing = await _languageService.GetAsync(lang.IsoCode);
         if (existing is not null)
+        {
+            await UpdateIfChangedAsync(existing, lang, fallbackLang, ct);
             return;
+        }
 
         CultureInfo culture;
         try
@@ -79,5 +82,40 @@ internal sealed class LanguageSyncEngine
         }
 
         _logger.LogInformation("Created language '{IsoCode}'.", lang.IsoCode);
+    }
+
+    private async Task UpdateIfChangedAsync(
+        ILanguage existing,
+        LanguageDefinition lang,
+        LanguageDefinition? fallbackLang,
+        CancellationToken ct)
+    {
+        var targetFallback = fallbackLang?.IsoCode;
+
+        var mandatoryChanged = existing.IsMandatory != lang.IsMandatory;
+        var fallbackChanged = !string.Equals(existing.FallbackIsoCode, targetFallback, StringComparison.OrdinalIgnoreCase);
+
+        if (!mandatoryChanged && !fallbackChanged)
+            return;
+
+        var previousMandatory = existing.IsMandatory;
+        var previousFallback = existing.FallbackIsoCode;
+
+        existing.IsMandatory = lang.IsMandatory;
+        existing.FallbackIsoCode = targetFallback;
+
+        var result = await _languageService.UpdateAsync(existing, Constants.Security.SuperUserKey);
+
+        if (!result.Success)
+        {
+            _logger.LogError("Failed to update language '{IsoCode}': {Status}.", lang.IsoCode, result.Status);
+            return;
+        }
+
+        if (mandatoryChanged)
+            _logger.LogInformation("Updated language '{IsoCode}': IsMandatory {Previous} -> {Current}.", lang.IsoCode, previousMandatory, lang.IsMandatory);
+
+        if (fallbackChanged)
+            _logger.LogInformation("Updated language '{IsoCode}': FallbackIsoCode '{Previous}' -> '{Current}'.", lang.IsoCode, previousFallback ?? "(none)", targetFallback ?? "(none)");
     }
 }

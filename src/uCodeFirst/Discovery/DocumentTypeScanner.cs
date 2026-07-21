@@ -38,7 +38,9 @@ internal sealed class DocumentTypeScanner
                 DefaultTemplate: null,
                 AllowedChildTypes: Array.Empty<Type>(),
                 Properties: ScanInterfaceProperties(iface),
-                CompositionKeys: Array.Empty<Guid>()));
+                CompositionKeys: Array.Empty<Guid>(),
+                VariesByCulture: false,
+                IsContainer: false));
         }
 
         // Document types from classes
@@ -64,7 +66,9 @@ internal sealed class DocumentTypeScanner
                 DefaultTemplate: attr.DefaultTemplate,
                 AllowedChildTypes: allowedChildren,
                 Properties: ScanClassProperties(type, compositionPropNames),
-                CompositionKeys: compositionKeys));
+                CompositionKeys: compositionKeys,
+                VariesByCulture: attr.VariesByCulture,
+                IsContainer: attr.IsContainer));
         }
 
         // Element types from classes
@@ -89,7 +93,11 @@ internal sealed class DocumentTypeScanner
                 DefaultTemplate: null,
                 AllowedChildTypes: Array.Empty<Type>(),
                 Properties: ScanClassProperties(type, compositionPropNames),
-                CompositionKeys: compositionKeys));
+                CompositionKeys: compositionKeys,
+                VariesByCulture: attr.VariesByCulture,
+                // Element types are used as Block List/Grid items, never as tree nodes with children,
+                // so [ElementType]'s IsContainer (kept for API symmetry) is intentionally ignored here.
+                IsContainer: false));
         }
 
         return definitions;
@@ -147,7 +155,8 @@ internal sealed class DocumentTypeScanner
                 SortOrder: groupAttr?.SortOrder ?? 0,
                 Mandatory: dataType.Mandatory,
                 Description: dataType.Description,
-                DataType: dataType));
+                DataType: dataType,
+                VariesByCulture: dataType.VariesByCulture));
         }
 
         return result;
@@ -175,7 +184,8 @@ internal sealed class DocumentTypeScanner
                 SortOrder: groupAttr?.SortOrder ?? 0,
                 Mandatory: dataType.Mandatory,
                 Description: dataType.Description,
-                DataType: dataType));
+                DataType: dataType,
+                VariesByCulture: dataType.VariesByCulture));
         }
 
         return result;
@@ -221,7 +231,8 @@ internal sealed class DocumentTypeScanner
                 AllowedChildTypes: allowedChildren,
                 Properties: ScanClassProperties(type, []),
                 CompositionKeys: compositionKeys,
-                ParentKey: parentKey));
+                ParentKey: parentKey,
+                IsContainer: attr.IsContainer));
         }
 
         return definitions;
@@ -301,6 +312,37 @@ internal sealed class DocumentTypeScanner
             }
 
             definitions.Add(new LanguageSetDefinition(enumType, defaultMember, languages));
+        }
+
+        return definitions;
+    }
+
+    // Unlike ScanLanguages, no enum-level marker attribute is required — [Template] isn't as
+    // singular a concept as "the language set", so any number of enums may carry
+    // [Template]-decorated members alongside unrelated values.
+    public IReadOnlyList<TemplateDefinition> ScanTemplates(IEnumerable<Assembly> assemblies)
+    {
+        var definitions = new List<TemplateDefinition>();
+
+        var allTypes = assemblies
+            .SelectMany(a =>
+            {
+                try { return a.GetTypes(); }
+                catch (ReflectionTypeLoadException ex) { return ex.Types.OfType<Type>(); }
+            })
+            .ToList();
+
+        foreach (var enumType in allTypes.Where(t => t.IsEnum))
+        {
+            foreach (var field in enumType.GetFields(BindingFlags.Public | BindingFlags.Static))
+            {
+                var templateAttr = field.GetCustomAttribute<TemplateAttribute>();
+                if (templateAttr is null)
+                    continue;
+
+                var master = ResolveEnumMember(enumType, templateAttr.Master);
+                definitions.Add(new TemplateDefinition(field, templateAttr.Alias, master));
+            }
         }
 
         return definitions;

@@ -11,7 +11,7 @@ public abstract class BlockGridDataType : DataTypeBase
     public virtual int GridColumns { get; } = 12;
     public virtual string? LayoutStylesheet { get; } = null;
 
-    internal override EditorRecipe BuildRecipe(Guid key, string name)
+    public override EditorRecipe BuildRecipe(Guid key, string name)
     {
         var blocks = Blocks.Select(BuildBlockConfig).Cast<object>().ToList();
 

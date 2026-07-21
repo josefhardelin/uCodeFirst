@@ -185,6 +185,7 @@ internal sealed class MediaTypeSyncEngine
         mediaType.Icon = BuildIconString(def.Icon, def.Color);
         mediaType.Description = def.Description ?? string.Empty;
         mediaType.AllowedAsRoot = def.AllowedAtRoot;
+        mediaType.ListView = def.IsContainer ? Constants.DataTypes.Guids.ListViewMediaGuid : null;
 
         ApplyProperties(mediaType, def, dataTypeByKey);
 
@@ -206,6 +207,7 @@ internal sealed class MediaTypeSyncEngine
         existing.Icon = BuildIconString(def.Icon, def.Color);
         existing.Description = def.Description ?? string.Empty;
         existing.AllowedAsRoot = def.AllowedAtRoot;
+        existing.ListView = def.IsContainer ? Constants.DataTypes.Guids.ListViewMediaGuid : null;
 
         if (def.ParentKey is { } parentKey)
         {
