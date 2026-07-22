@@ -7,6 +7,7 @@ namespace uCodeFirst.Attributes;
 [AttributeUsage(AttributeTargets.Field, AllowMultiple = false, Inherited = false)]
 public sealed class LanguageAttribute : Attribute
 {
+    /// <param name="IsoCode">ISO code of the language, e.g. "en-US".</param>
     public LanguageAttribute(string IsoCode)
     {
         this.IsoCode = IsoCode;

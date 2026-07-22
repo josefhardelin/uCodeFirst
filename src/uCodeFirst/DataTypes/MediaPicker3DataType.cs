@@ -3,13 +3,19 @@ using Umbraco.Cms.Core.Models;
 
 namespace uCodeFirst.DataTypes;
 
+/// <summary>Base for property editors backed by Umbraco's "Media Picker" (<c>Umbraco.MediaPicker3</c>) editor.</summary>
 public abstract class MediaPicker3DataType : DataTypeBase
 {
+    /// <summary>Whether more than one media item may be picked.</summary>
     public virtual bool AllowMultiple { get; } = false;
+    /// <summary>Whether editors can adjust the local focal point/crop for each picked item.</summary>
     public virtual bool EnableCrops { get; } = false;
+    /// <summary>Minimum number of items required. Zero means no minimum.</summary>
     public virtual int MinItems { get; } = 0;
+    /// <summary>Maximum number of items allowed. Zero means unlimited.</summary>
     public virtual int MaxItems { get; } = 0;
 
+    /// <inheritdoc/>
     public override EditorRecipe BuildRecipe(Guid key, string name)
     {
         IDictionary<string, object> config = new Dictionary<string, object>

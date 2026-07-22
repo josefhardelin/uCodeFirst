@@ -45,3 +45,9 @@ desktop.ini
 **/umbraco/Data
 **/umbraco/Logs
 
+# DocFX generated output
+public-docs/_site/
+public-docs/obj/
+public-docs/api/*
+!public-docs/api/index.md
+

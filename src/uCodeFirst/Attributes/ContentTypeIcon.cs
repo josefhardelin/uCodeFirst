@@ -1,5 +1,6 @@
 namespace uCodeFirst.Attributes;
 
+/// <summary>Backoffice icon-class constants for use with the <c>Icon</c> property of content type attributes.</summary>
 public static class ContentTypeIcon
 {
     public const string Activity = "icon-activity";

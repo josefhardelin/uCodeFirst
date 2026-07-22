@@ -11,6 +11,8 @@ namespace uCodeFirst.BuiltIn;
 [MediaType("Image", External: true, Guid = "cc07b313-0843-4aa8-bbda-871c8da728c8")]
 public abstract class UmbracoImageModel : UmbracoImageLikeMediaModel
 {
+    /// <param name="content">The underlying published content item.</param>
+    /// <param name="fallback">Umbraco's fallback resolver.</param>
     protected UmbracoImageModel(IPublishedContent content, IPublishedValueFallback fallback)
         : base(content, fallback) { }
 }

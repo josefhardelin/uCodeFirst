@@ -5,12 +5,22 @@ using Umbraco.Cms.Core.Models;
 
 namespace uCodeFirst.DataTypes;
 
+/// <summary>
+/// Base for property editors backed by Umbraco's "Block Grid" (<c>Umbraco.BlockGrid</c>) editor.
+/// Unlike most other data types, subclass this directly on a per-property basis (no shared concrete
+/// wrapper) since <see cref="Blocks"/> is specific to each property's content model — see
+/// <see cref="BlockDefinition"/>.
+/// </summary>
 public abstract class BlockGridDataType : DataTypeBase
 {
+    /// <summary>The block types available to editors, each pointing at an element type via <see cref="BlockDefinition.ContentType"/>.</summary>
     public virtual BlockDefinition[] Blocks { get; } = [];
+    /// <summary>Total number of columns in the grid's layout.</summary>
     public virtual int GridColumns { get; } = 12;
+    /// <summary>Path to a stylesheet defining custom layout classes for the grid. Null uses Umbraco's default layout.</summary>
     public virtual string? LayoutStylesheet { get; } = null;
 
+    /// <inheritdoc/>
     public override EditorRecipe BuildRecipe(Guid key, string name)
     {
         var blocks = Blocks.Select(BuildBlockConfig).Cast<object>().ToList();

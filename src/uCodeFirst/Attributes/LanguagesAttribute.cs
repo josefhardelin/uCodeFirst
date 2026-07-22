@@ -9,6 +9,10 @@ namespace uCodeFirst.Attributes;
 [AttributeUsage(AttributeTargets.Enum, AllowMultiple = false, Inherited = false)]
 public sealed class LanguagesAttribute : Attribute
 {
+    /// <param name="DefaultLanguage">
+    /// The enum member (of the enum this attribute is applied to) whose language becomes
+    /// Umbraco's default language the first time it is created. Must carry <see cref="LanguageAttribute"/>.
+    /// </param>
     public LanguagesAttribute(object DefaultLanguage)
     {
         this.DefaultLanguage = DefaultLanguage;

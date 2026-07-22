@@ -10,9 +10,13 @@ namespace uCodeFirst.BuiltIn;
 /// </summary>
 public abstract class UmbracoImageLikeMediaModel : UmbracoFileMediaModel
 {
+    /// <param name="content">The underlying published content item.</param>
+    /// <param name="fallback">Umbraco's fallback resolver.</param>
     protected UmbracoImageLikeMediaModel(IPublishedContent content, IPublishedValueFallback fallback)
         : base(content, fallback) { }
 
+    /// <summary>Image width in pixels.</summary>
     public int? Width => this.Value<int?>(ValueFallback, Constants.Conventions.Media.Width);
+    /// <summary>Image height in pixels.</summary>
     public int? Height => this.Value<int?>(ValueFallback, Constants.Conventions.Media.Height);
 }

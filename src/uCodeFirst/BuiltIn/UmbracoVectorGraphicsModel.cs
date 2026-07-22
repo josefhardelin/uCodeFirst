@@ -11,6 +11,8 @@ namespace uCodeFirst.BuiltIn;
 [MediaType("Vector Graphics (SVG)", External: true, Guid = "c4b1efcf-a9d5-41c4-9621-e9d273b52a9c")]
 public abstract class UmbracoVectorGraphicsModel : UmbracoImageLikeMediaModel
 {
+    /// <param name="content">The underlying published content item.</param>
+    /// <param name="fallback">Umbraco's fallback resolver.</param>
     protected UmbracoVectorGraphicsModel(IPublishedContent content, IPublishedValueFallback fallback)
         : base(content, fallback) { }
 }

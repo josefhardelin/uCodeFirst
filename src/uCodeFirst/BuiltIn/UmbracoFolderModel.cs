@@ -11,6 +11,8 @@ namespace uCodeFirst.BuiltIn;
 [MediaType("Folder", External: true, Guid = "f38bd2d7-65d0-48e6-95dc-87ce06ec2d3d")]
 public abstract class UmbracoFolderModel : PublishedContentModel
 {
+    /// <param name="content">The underlying published content item.</param>
+    /// <param name="fallback">Umbraco's fallback resolver.</param>
     protected UmbracoFolderModel(IPublishedContent content, IPublishedValueFallback fallback)
         : base(content, fallback) { }
 }

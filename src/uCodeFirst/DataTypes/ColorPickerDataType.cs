@@ -2,12 +2,15 @@ using uCodeFirst.Sync;
 
 namespace uCodeFirst.DataTypes;
 
+/// <summary>Base for property editors backed by Umbraco's "Color Picker" (<c>Umbraco.ColorPicker</c>) editor.</summary>
 public abstract class ColorPickerDataType : DataTypeBase
 {
     /// <summary>Approved palette as "label:#hex" pairs. Empty allows any color.</summary>
     public virtual string[] Palette { get; } = [];
+    /// <summary>Whether each palette entry's label is shown alongside its swatch.</summary>
     public virtual bool ShowLabels { get; } = false;
 
+    /// <inheritdoc/>
     public override EditorRecipe BuildRecipe(Guid key, string name)
     {
         IDictionary<string, object> config = new Dictionary<string, object> { ["useLabel"] = ShowLabels };

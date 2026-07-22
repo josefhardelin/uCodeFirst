@@ -1,5 +1,6 @@
 namespace uCodeFirst.Attributes;
 
+/// <summary>Backoffice icon-color constants for use with the <c>Color</c> property of content type attributes.</summary>
 public static class ContentTypeColor
 {
     public const string Black = "color-black";

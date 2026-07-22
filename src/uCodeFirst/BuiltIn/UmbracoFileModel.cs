@@ -11,6 +11,8 @@ namespace uCodeFirst.BuiltIn;
 [MediaType("File", External: true, Guid = "4c52d8ab-54e6-40cd-999c-7a5f24903e4d")]
 public abstract class UmbracoFileModel : UmbracoFileMediaModel
 {
+    /// <param name="content">The underlying published content item.</param>
+    /// <param name="fallback">Umbraco's fallback resolver.</param>
     protected UmbracoFileModel(IPublishedContent content, IPublishedValueFallback fallback)
         : base(content, fallback) { }
 }

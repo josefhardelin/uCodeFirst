@@ -9,6 +9,7 @@ namespace uCodeFirst.Attributes;
 [AttributeUsage(AttributeTargets.Field, AllowMultiple = false, Inherited = false)]
 public sealed class TemplateAttribute : Attribute
 {
+    /// <param name="Alias">Alias of the template. Matched against a document/element type's DefaultTemplate.</param>
     public TemplateAttribute(string Alias)
     {
         this.Alias = Alias;

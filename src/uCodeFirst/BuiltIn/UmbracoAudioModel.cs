@@ -11,6 +11,8 @@ namespace uCodeFirst.BuiltIn;
 [MediaType("Audio", External: true, Guid = "a5ddeee0-8fd8-4cee-a658-6f1fcdb00de3")]
 public abstract class UmbracoAudioModel : UmbracoFileMediaModel
 {
+    /// <param name="content">The underlying published content item.</param>
+    /// <param name="fallback">Umbraco's fallback resolver.</param>
     protected UmbracoAudioModel(IPublishedContent content, IPublishedValueFallback fallback)
         : base(content, fallback) { }
 }

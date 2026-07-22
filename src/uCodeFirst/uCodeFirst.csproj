@@ -6,6 +6,7 @@
     <Description>Code-first schema authoring for Umbraco CMS 17+. Define document types as C#
       classes; the package syncs them into Umbraco on startup.</Description>
     <PackageTags>umbraco;code-first;schema;content-types;document-types</PackageTags>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
 
   <ItemGroup>

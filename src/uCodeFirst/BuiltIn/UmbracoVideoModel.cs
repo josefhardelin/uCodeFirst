@@ -11,6 +11,8 @@ namespace uCodeFirst.BuiltIn;
 [MediaType("Video", External: true, Guid = "f6c515bb-653c-4bdc-821c-987729ebe327")]
 public abstract class UmbracoVideoModel : UmbracoFileMediaModel
 {
+    /// <param name="content">The underlying published content item.</param>
+    /// <param name="fallback">Umbraco's fallback resolver.</param>
     protected UmbracoVideoModel(IPublishedContent content, IPublishedValueFallback fallback)
         : base(content, fallback) { }
 }
