@@ -37,4 +37,12 @@ public partial class NewsArticle : PublishedContentModel
     [Group(Groups.Content, SortOrder: 2)]
     [TextString(Name = "Author")]
     public string? Author => this.Value<string>(_publishedValueFallback, "author");
+
+    [Group(Groups.Content, SortOrder: 3)]
+    [DatePicker(Name = "Published Date")]
+    public DateTime? PublishedDate => this.Value<DateTime?>(_publishedValueFallback, "publishedDate");
+
+    [Group(Groups.Settings, SortOrder: 0)]
+    [TrueFalse(Name = "Is Breaking News")]
+    public bool IsBreakingNews => this.Value<bool>(_publishedValueFallback, "isBreakingNews");
 }

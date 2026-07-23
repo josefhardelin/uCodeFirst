@@ -62,4 +62,9 @@ public partial class BlogPost : PublishedContentModel
     [Group(Groups.Settings, SortOrder: 1)]
     [ColorPicker(Name = "Accent Color")]
     public string? AccentColor => this.Value<string>(_publishedValueFallback, "accentColor");
+
+    // Fixed option list configured in PostCategoryDropdown (see Models/DataTypes/PostCategoryDropdown.cs).
+    [Group(Groups.Settings, SortOrder: 2)]
+    [PostCategoryDropdown(Name = "Category")]
+    public string? Category => this.Value<string>(_publishedValueFallback, "category");
 }
