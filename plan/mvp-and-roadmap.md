@@ -97,8 +97,12 @@ The smallest slice that proves **write class → start site → query it** end-t
     export is at Umbraco's default), so not urgent — revisit if a concrete need appears. See
     `docs/research/ucodefirst-vs-v17-usync-status.md` gap #6.
 
-11. **Native production sync safety** — dry-run/preview, destructive-change gating (the parts uSync covers
-    for us in the MVP).
+11. **Backoffice dry-run dashboard** — screen showing the current `uCodeFirst` plan/diff (creates, updates,
+    prunes per `Strategy`), with a user-triggered "run dry-run now" action for when `Enabled: false`
+    (rather than only seeing the diff at startup, in logs). Needs its own scoping (Umbraco dashboards are
+    a Lit/web-component + package-manifest registration, not part of the sync pipeline). Production safety
+    itself (`Enabled`/`Strategy` in appsettings, always-safe dry-run on `Enabled: false`) is no longer on
+    the roadmap — it's the current `uCodeFirst`/`Strategy` config work, not a deferred item.
 
 12. **Source generator** — removes `_publishedValueFallback` field and `Value<T>` getter boilerplate.
     Nice to have, but the manual pattern is workable and a generator adds build-time complexity.

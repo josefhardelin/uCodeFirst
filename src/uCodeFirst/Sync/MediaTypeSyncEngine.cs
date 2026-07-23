@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using uCodeFirst.Attributes;
+using uCodeFirst.Configuration;
 using uCodeFirst.Discovery;
 using Microsoft.Extensions.Logging;
 using Umbraco.Cms.Core.Models;
@@ -29,6 +30,7 @@ internal sealed class MediaTypeSyncEngine
     public async Task SyncAsync(
         IReadOnlyList<MediaTypeDefinition> definitions,
         Dictionary<Guid, IDataType> dataTypeByKey,
+        CodeFirstStrategy strategy,
         CancellationToken ct = default)
     {
         var aliasByKey = definitions.ToDictionary(d => d.Key, d => d.Alias);
@@ -41,7 +43,7 @@ internal sealed class MediaTypeSyncEngine
             if (existing is null)
                 await CreateAsync(def, dataTypeByKey, folderIdByPath);
             else
-                await UpdateAsync(existing, def, dataTypeByKey, folderIdByPath);
+                await UpdateAsync(existing, def, dataTypeByKey, folderIdByPath, strategy);
         }
 
         // Pass 2: wire AllowedChildren
@@ -62,6 +64,57 @@ internal sealed class MediaTypeSyncEngine
 
         // Pass 3: wire external compositions
         await SyncCompositionsAsync(definitions, ct);
+    }
+
+    // Read-only preview of what SyncAsync would do — no writes. AllowedChildren and compositions are
+    // not part of the plan; Strategy doesn't gate them.
+    public async Task<TypeSyncPlan> PlanAsync(
+        IReadOnlyList<MediaTypeDefinition> definitions,
+        CodeFirstStrategy strategy,
+        CancellationToken ct = default)
+    {
+        var plan = new TypeSyncPlan();
+
+        foreach (var def in definitions)
+        {
+            var existing = await _mediaTypeService.GetAsync(def.Key);
+            if (existing is null)
+            {
+                plan.ToCreate.Add(new PlanItem(def.Alias, def.Key));
+                continue;
+            }
+
+            plan.ToUpdate.Add(new PlanItem(def.Alias, def.Key));
+
+            if (strategy != CodeFirstStrategy.Destructive)
+                continue;
+
+            var currentAliases = def.Properties.Select(p => p.Alias).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var staleProps = existing.PropertyTypes.Where(pt => !currentAliases.Contains(pt.Alias)).ToList();
+
+            var affectedGroupAliases = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var stale in staleProps)
+            {
+                plan.PrunedProperties.Add(new PrunedProperty(def.Alias, stale.Alias));
+
+                var group = existing.PropertyGroups.FirstOrDefault(g => g.PropertyTypes.Any(pt => string.Equals(pt.Alias, stale.Alias, StringComparison.OrdinalIgnoreCase)));
+                if (group is not null)
+                    affectedGroupAliases.Add(group.Alias);
+            }
+
+            foreach (var groupAlias in affectedGroupAliases)
+            {
+                var group = existing.PropertyGroups.FirstOrDefault(g => string.Equals(g.Alias, groupAlias, StringComparison.OrdinalIgnoreCase));
+                if (group is null)
+                    continue;
+
+                var remaining = group.PropertyTypes.Count(pt => !staleProps.Any(s => string.Equals(s.Alias, pt.Alias, StringComparison.OrdinalIgnoreCase)));
+                if (remaining == 0)
+                    plan.PrunedGroups.Add(new PrunedGroup(def.Alias, group.Alias));
+            }
+        }
+
+        return plan;
     }
 
     private async Task SyncCompositionsAsync(IReadOnlyList<MediaTypeDefinition> definitions, CancellationToken ct)
@@ -200,7 +253,8 @@ internal sealed class MediaTypeSyncEngine
         IMediaType existing,
         MediaTypeDefinition def,
         Dictionary<Guid, IDataType> dataTypeByKey,
-        Dictionary<string, int> folderIdByPath)
+        Dictionary<string, int> folderIdByPath,
+        CodeFirstStrategy strategy)
     {
         existing.Alias = def.Alias;
         existing.Name = def.Name;
@@ -231,6 +285,9 @@ internal sealed class MediaTypeSyncEngine
         }
 
         MergeProperties(existing, def, dataTypeByKey);
+
+        if (strategy == CodeFirstStrategy.Destructive)
+            PruneStaleProperties(existing, def);
 
         var result = await _mediaTypeService.UpdateAsync(existing, Constants.Security.SuperUserKey);
         if (result.Success)
@@ -341,6 +398,37 @@ internal sealed class MediaTypeSyncEngine
                     };
                     mediaType.AddPropertyType(propertyType, groupAlias, group.Key);
                 }
+            }
+        }
+    }
+
+    // Strategy.Destructive only. Removes PropertyTypes whose alias is no longer in the current C#
+    // definition, then removes any PropertyGroup left empty as a result. No provenance tracking.
+    private void PruneStaleProperties(IMediaType mediaType, MediaTypeDefinition def)
+    {
+        var currentAliases = def.Properties.Select(p => p.Alias).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var staleProps = mediaType.PropertyTypes.Where(pt => !currentAliases.Contains(pt.Alias)).ToList();
+        if (staleProps.Count == 0)
+            return;
+
+        var affectedGroupAliases = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var stale in staleProps)
+        {
+            var group = mediaType.PropertyGroups.FirstOrDefault(g => g.PropertyTypes.Any(pt => string.Equals(pt.Alias, stale.Alias, StringComparison.OrdinalIgnoreCase)));
+            if (group is not null)
+                affectedGroupAliases.Add(group.Alias);
+
+            mediaType.RemovePropertyType(stale.Alias);
+            _logger.LogInformation("Pruned stale property '{Alias}' from media type '{Type}' (Destructive).", stale.Alias, def.Alias);
+        }
+
+        foreach (var groupAlias in affectedGroupAliases)
+        {
+            var group = mediaType.PropertyGroups.FirstOrDefault(g => string.Equals(g.Alias, groupAlias, StringComparison.OrdinalIgnoreCase));
+            if (group is not null && group.PropertyTypes.Count == 0)
+            {
+                mediaType.PropertyGroups.Remove(groupAlias);
+                _logger.LogInformation("Pruned empty property group '{Group}' from media type '{Type}' (Destructive).", groupAlias, def.Alias);
             }
         }
     }

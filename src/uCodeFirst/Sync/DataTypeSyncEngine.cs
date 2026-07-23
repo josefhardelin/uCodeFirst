@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using uCodeFirst.Discovery;
 using Microsoft.Extensions.Logging;
 using Umbraco.Cms.Core.Models;
@@ -60,7 +61,7 @@ internal sealed class DataTypeSyncEngine
             if (existing is not null)
             {
                 dataTypeByKey[recipe.Key] = existing;
-                _logger.LogDebug("Code-first data type '{Name}' already exists.", recipe.Name);
+                await UpdateIfChangedAsync(existing, recipe, ct);
                 continue;
             }
 
@@ -94,5 +95,33 @@ internal sealed class DataTypeSyncEngine
         }
 
         return dataTypeByKey;
+    }
+
+    // A data type's GUID key is fixed on its [DataType] attribute and does not encode its config,
+    // so the same key can legitimately carry different config across scans (e.g. a BlockGrid data
+    // type gaining a new block, or a Dropdown's Options list changing). Compare semantically via
+    // JSON — dictionary key order/number formatting differ across a DB round-trip even when the
+    // config is unchanged, so a raw string/reference comparison would false-positive on every run.
+    private async Task UpdateIfChangedAsync(IDataType existing, EditorRecipe recipe, CancellationToken ct)
+    {
+        var existingConfigJson = JsonNode.Parse(_serializer.Serialize(existing.ConfigurationData));
+        var recipeConfigJson = JsonNode.Parse(_serializer.Serialize(recipe.ConfigData));
+
+        if (JsonNode.DeepEquals(existingConfigJson, recipeConfigJson))
+        {
+            _logger.LogDebug("Code-first data type '{Name}' already exists and is unchanged.", recipe.Name);
+            return;
+        }
+
+        existing.ConfigurationData = recipe.ConfigData;
+
+        var result = await _dataTypeService.UpdateAsync(existing, Constants.Security.SuperUserKey);
+        if (!result.Success)
+        {
+            _logger.LogError("Failed to update data type '{Name}' ({Key}): {Status}.", recipe.Name, recipe.Key, result.Status);
+            return;
+        }
+
+        _logger.LogInformation("Updated code-first data type '{Name}' ({Key}) — configuration changed.", recipe.Name, recipe.Key);
     }
 }

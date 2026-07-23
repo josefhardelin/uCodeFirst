@@ -5,12 +5,25 @@
     <Authors>Josef Härdelin</Authors>
     <Description>Code-first schema authoring for Umbraco CMS 17+. Define document types as C#
       classes; the package syncs them into Umbraco on startup.</Description>
-    <PackageTags>umbraco;code-first;schema;content-types;document-types</PackageTags>
+    <PackageTags>umbraco;umbraco-marketplace;code-first;schema;content-types;document-types</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/josefhardelin/uCodeFirst</PackageProjectUrl>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <Copyright>Copyright (c) Josef Härdelin 2026</Copyright>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Umbraco.Cms.Web.Common" Version="[17.4.2, 18.0.0)" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 
   <ItemGroup>

@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using uCodeFirst.Attributes;
+using uCodeFirst.Configuration;
 using uCodeFirst.Discovery;
 using Microsoft.Extensions.Logging;
 using Umbraco.Cms.Core.Models;
@@ -32,6 +33,7 @@ internal sealed class ContentTypeSyncEngine
     public async Task SyncAsync(
         IReadOnlyList<DocumentTypeDefinition> definitions,
         Dictionary<Guid, IDataType> dataTypeByKey,
+        CodeFirstStrategy strategy,
         CancellationToken ct = default)
     {
         var aliasByKey = definitions.ToDictionary(d => d.Key, d => d.Alias);
@@ -52,7 +54,7 @@ internal sealed class ContentTypeSyncEngine
             if (existing is null)
                 await CreateAsync(def, dataTypeByKey, folderIdByPath);
             else
-                await UpdateAsync(existing, def, dataTypeByKey, folderIdByPath);
+                await UpdateAsync(existing, def, dataTypeByKey, folderIdByPath, strategy);
         }
 
         // Pass 2: wire AllowedChildren (document types only)
@@ -73,6 +75,68 @@ internal sealed class ContentTypeSyncEngine
 
         // Pass 3: wire compositions
         await SyncCompositionsAsync(definitions, compositionTypeKeys, ct);
+    }
+
+    // Read-only preview of what SyncAsync would do — no writes. AllowedChildren and compositions are
+    // not part of the plan: they already have their own existing unconditional/scoped update behavior
+    // and Strategy doesn't gate them.
+    public async Task<TypeSyncPlan> PlanAsync(
+        IReadOnlyList<DocumentTypeDefinition> definitions,
+        CodeFirstStrategy strategy,
+        CancellationToken ct = default)
+    {
+        var plan = new TypeSyncPlan();
+
+        foreach (var def in definitions)
+        {
+            var existing = await _contentTypeService.GetAsync(def.Key);
+            if (existing is null)
+            {
+                plan.ToCreate.Add(new PlanItem(def.Alias, def.Key));
+                continue;
+            }
+
+            plan.ToUpdate.Add(new PlanItem(def.Alias, def.Key));
+
+            if (strategy != CodeFirstStrategy.Destructive)
+                continue;
+
+            CollectStalePropertiesAndGroups(existing.PropertyTypes, existing.PropertyGroups, def.Properties, def.Alias, plan);
+        }
+
+        return plan;
+    }
+
+    private static void CollectStalePropertiesAndGroups(
+        IEnumerable<IPropertyType> existingProperties,
+        IEnumerable<PropertyGroup> existingGroups,
+        IReadOnlyList<PropertyDefinition> currentProperties,
+        string typeAlias,
+        TypeSyncPlan plan)
+    {
+        var currentAliases = currentProperties.Select(p => p.Alias).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var staleProps = existingProperties.Where(pt => !currentAliases.Contains(pt.Alias)).ToList();
+
+        var affectedGroupAliases = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var stale in staleProps)
+        {
+            plan.PrunedProperties.Add(new PrunedProperty(typeAlias, stale.Alias));
+
+            var group = existingGroups.FirstOrDefault(g => g.PropertyTypes.Any(pt => string.Equals(pt.Alias, stale.Alias, StringComparison.OrdinalIgnoreCase)));
+            if (group is not null)
+                affectedGroupAliases.Add(group.Alias);
+        }
+
+        foreach (var groupAlias in affectedGroupAliases)
+        {
+            var group = existingGroups.FirstOrDefault(g => string.Equals(g.Alias, groupAlias, StringComparison.OrdinalIgnoreCase));
+            if (group is null)
+                continue;
+
+            var remaining = group.PropertyTypes.Count(pt => !staleProps.Any(s => string.Equals(s.Alias, pt.Alias, StringComparison.OrdinalIgnoreCase)));
+            if (remaining == 0)
+                plan.PrunedGroups.Add(new PrunedGroup(typeAlias, group.Alias));
+        }
     }
 
     private async Task SyncCompositionsAsync(
@@ -212,7 +276,8 @@ internal sealed class ContentTypeSyncEngine
         IContentType existing,
         DocumentTypeDefinition def,
         Dictionary<Guid, IDataType> dataTypeByKey,
-        Dictionary<string, int> folderIdByPath)
+        Dictionary<string, int> folderIdByPath,
+        CodeFirstStrategy strategy)
     {
         existing.Alias = def.Alias;
         existing.Name = def.Name;
@@ -229,6 +294,10 @@ internal sealed class ContentTypeSyncEngine
             existing.ParentId = targetParentId;
 
         MergeProperties(existing, def, dataTypeByKey);
+
+        if (strategy == CodeFirstStrategy.Destructive)
+            PruneStaleProperties(existing, def);
+
         await ApplyTemplateAsync(existing, def);
 
         var result = await _contentTypeService.UpdateAsync(existing, Constants.Security.SuperUserKey);
@@ -382,6 +451,39 @@ internal sealed class ContentTypeSyncEngine
                     };
                     contentType.AddPropertyType(propertyType, groupAlias, group.Key);
                 }
+            }
+        }
+    }
+
+    // Strategy.Destructive only. Removes PropertyTypes whose alias is no longer in the current C#
+    // definition, then removes any PropertyGroup left empty as a result. No provenance tracking —
+    // anything hand-added in the backoffice on a code-first-managed type is removed too if its alias
+    // isn't in the C# definition.
+    private void PruneStaleProperties(IContentType contentType, DocumentTypeDefinition def)
+    {
+        var currentAliases = def.Properties.Select(p => p.Alias).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var staleProps = contentType.PropertyTypes.Where(pt => !currentAliases.Contains(pt.Alias)).ToList();
+        if (staleProps.Count == 0)
+            return;
+
+        var affectedGroupAliases = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var stale in staleProps)
+        {
+            var group = contentType.PropertyGroups.FirstOrDefault(g => g.PropertyTypes.Any(pt => string.Equals(pt.Alias, stale.Alias, StringComparison.OrdinalIgnoreCase)));
+            if (group is not null)
+                affectedGroupAliases.Add(group.Alias);
+
+            contentType.RemovePropertyType(stale.Alias);
+            _logger.LogInformation("Pruned stale property '{Alias}' from '{Type}' (Destructive).", stale.Alias, def.Alias);
+        }
+
+        foreach (var groupAlias in affectedGroupAliases)
+        {
+            var group = contentType.PropertyGroups.FirstOrDefault(g => string.Equals(g.Alias, groupAlias, StringComparison.OrdinalIgnoreCase));
+            if (group is not null && group.PropertyTypes.Count == 0)
+            {
+                contentType.PropertyGroups.Remove(groupAlias);
+                _logger.LogInformation("Pruned empty property group '{Group}' from '{Type}' (Destructive).", groupAlias, def.Alias);
             }
         }
     }

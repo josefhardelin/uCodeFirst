@@ -1,5 +1,7 @@
+using uCodeFirst.Configuration;
 using uCodeFirst.Sync;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Umbraco.Cms.Core;
 using Umbraco.Cms.Core.Events;
 using Umbraco.Cms.Core.Notifications;
@@ -11,15 +13,18 @@ internal sealed class CodeFirstStartupHandler : INotificationAsyncHandler<Umbrac
 {
     private readonly CodeFirstSyncService _syncService;
     private readonly IRuntimeState _runtimeState;
+    private readonly IOptions<CodeFirstOptions> _options;
     private readonly ILogger<CodeFirstStartupHandler> _logger;
 
     public CodeFirstStartupHandler(
         CodeFirstSyncService syncService,
         IRuntimeState runtimeState,
+        IOptions<CodeFirstOptions> options,
         ILogger<CodeFirstStartupHandler> logger)
     {
         _syncService = syncService;
         _runtimeState = runtimeState;
+        _options = options;
         _logger = logger;
     }
 
@@ -31,15 +36,27 @@ internal sealed class CodeFirstStartupHandler : INotificationAsyncHandler<Umbrac
             return;
         }
 
+        var options = _options.Value;
+
         try
         {
             var assemblies = AppDomain.CurrentDomain.GetAssemblies();
-            await _syncService.SyncAsync(assemblies, cancellationToken);
+            if (options.Enabled)
+                await _syncService.SyncAsync(assemblies, options.Strategy, cancellationToken);
+            else
+                await _syncService.PlanAsync(assemblies, options.Strategy, cancellationToken);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Code-first startup sync failed.");
-            throw;
+            if (options.Enabled)
+            {
+                _logger.LogError(ex, "Code-first startup sync failed.");
+                throw;
+            }
+
+            // uCodeFirst:Enabled=false is a permanent, safe dry-run preview — it must never block startup,
+            // even on pre-flight validation failures on a legacy codebase being onboarded.
+            _logger.LogWarning(ex, "Code-first dry-run preview failed — startup continues since uCodeFirst is not Enabled.");
         }
     }
 }

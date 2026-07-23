@@ -9,6 +9,11 @@ namespace uCodeFirst.Sync;
 // Code owns dictionary item keys and hierarchy only — never translation values. Existing items
 // (leaf or auto-created parent) are left completely untouched; only missing items are created.
 // Additive-only, like the content/media type engines: nothing is ever deleted.
+//
+// NOTE: unlike DataTypeSyncEngine/LanguageSyncEngine/TemplateSyncEngine, this engine cannot grow
+// update-on-drift logic without a prior, separate API decision: [DictionaryItem] only captures a
+// key and hierarchy today (see DictionaryItemDefinition) — there is no way to declare translation
+// text in C# at all yet, so there is nothing yet to diff an existing item's values against.
 internal sealed class DictionaryItemSyncEngine
 {
     private readonly IDictionaryItemService _dictionaryItemService;

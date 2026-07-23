@@ -1,3 +1,4 @@
+using uCodeFirst.Configuration;
 using uCodeFirst.Discovery;
 using uCodeFirst.Sync;
 using uCodeFirst.Validation;
@@ -11,6 +12,10 @@ public static class UmbracoBuilderExtensions
 {
     public static IUmbracoBuilder AddCodeFirst(this IUmbracoBuilder builder)
     {
+        builder.Services
+            .AddOptions<CodeFirstOptions>()
+            .Bind(builder.Config.GetSection("uCodeFirst"));
+
         builder.Services
             .AddSingleton<DocumentTypeScanner>()
             .AddSingleton<PreFlightValidator>()
