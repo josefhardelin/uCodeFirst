@@ -79,6 +79,28 @@ internal sealed class CodeFirstSyncService
         if (scan.IsEmpty)
             return;
 
+        var result = await BuildPlanResultAsync(scan, strategy, enabled: false, ct);
+        LogPlan(result, strategy);
+    }
+
+    // On-demand path for the backoffice dry-run dashboard (Api/PlanCodeFirstController) — a live,
+    // fresh computation every call, no caching. `enabled` is passed through from the caller's
+    // IOptions<CodeFirstOptions> snapshot rather than read here, since CodeFirstSyncService itself only
+    // takes a strategy, not the full options object (see CodeFirstOptions). Works regardless of
+    // Enabled — the caller decides what "enabled" means for the response (current config state), it
+    // does not gate whether a plan can be computed.
+    public async Task<CodeFirstPlanResult> ComputePlanAsync(
+        IEnumerable<Assembly> assemblies,
+        CodeFirstStrategy strategy,
+        bool enabled,
+        CancellationToken ct = default)
+    {
+        var scan = ScanAndValidate(assemblies.ToList());
+        return await BuildPlanResultAsync(scan, strategy, enabled, ct);
+    }
+
+    private async Task<CodeFirstPlanResult> BuildPlanResultAsync(ScanResult scan, CodeFirstStrategy strategy, bool enabled, CancellationToken ct)
+    {
         var contentPlan = scan.Definitions.Count > 0
             ? await _contentTypeSyncEngine.PlanAsync(scan.Definitions, strategy, ct)
             : new TypeSyncPlan();
@@ -87,17 +109,22 @@ internal sealed class CodeFirstSyncService
             ? await _mediaTypeSyncEngine.PlanAsync(scan.MediaDefinitions, strategy, ct)
             : new TypeSyncPlan();
 
-        LogPlan(contentPlan, mediaPlan, strategy);
+        return new CodeFirstPlanResult
+        {
+            Enabled = enabled,
+            Strategy = strategy.ToString(),
+            GeneratedAtUtc = DateTime.UtcNow,
+            ToCreate = contentPlan.ToCreate.Concat(mediaPlan.ToCreate).Select(i => i.Alias).ToList(),
+            ToUpdate = contentPlan.ToUpdate.Concat(mediaPlan.ToUpdate).Select(i => i.Alias).ToList(),
+            PrunedProperties = contentPlan.PrunedProperties.Concat(mediaPlan.PrunedProperties).ToList(),
+            PrunedGroups = contentPlan.PrunedGroups.Concat(mediaPlan.PrunedGroups).ToList(),
+        };
     }
 
-    private void LogPlan(TypeSyncPlan contentPlan, TypeSyncPlan mediaPlan, CodeFirstStrategy strategy)
+    private void LogPlan(CodeFirstPlanResult result, CodeFirstStrategy strategy)
     {
-        var toCreate = contentPlan.ToCreate.Concat(mediaPlan.ToCreate).Select(i => i.Alias).ToList();
-        var toUpdate = contentPlan.ToUpdate.Concat(mediaPlan.ToUpdate).Select(i => i.Alias).ToList();
-        var prunedProperties = contentPlan.PrunedProperties.Concat(mediaPlan.PrunedProperties)
-            .Select(p => $"{p.TypeAlias}.{p.PropertyAlias}").ToList();
-        var prunedGroups = contentPlan.PrunedGroups.Concat(mediaPlan.PrunedGroups)
-            .Select(g => $"{g.TypeAlias}.{g.GroupAlias}").ToList();
+        var prunedProperties = result.PrunedProperties.Select(p => $"{p.TypeAlias}.{p.PropertyAlias}").ToList();
+        var prunedGroups = result.PrunedGroups.Select(g => $"{g.TypeAlias}.{g.GroupAlias}").ToList();
 
         var pruneSummary = strategy == CodeFirstStrategy.Destructive
             ? $"Would prune: {prunedProperties.Count} propert{(prunedProperties.Count == 1 ? "y" : "ies")} [{string.Join(", ", prunedProperties)}], {prunedGroups.Count} empty group(s) [{string.Join(", ", prunedGroups)}]."
@@ -106,8 +133,8 @@ internal sealed class CodeFirstSyncService
         _logger.LogInformation(
             "uCodeFirst dry run (Enabled=false) — Would create: {CreateCount} [{Creates}]. Would update: {UpdateCount} [{Updates}]. {PruneSummary} " +
             "Dry-run preview does not yet cover data types, dictionary items, languages, or templates — only content types and media types.",
-            toCreate.Count, string.Join(", ", toCreate),
-            toUpdate.Count, string.Join(", ", toUpdate),
+            result.ToCreate.Count, string.Join(", ", result.ToCreate),
+            result.ToUpdate.Count, string.Join(", ", result.ToUpdate),
             pruneSummary);
     }
 

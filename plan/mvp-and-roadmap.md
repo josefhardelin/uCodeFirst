@@ -43,6 +43,7 @@ The smallest slice that proves **write class → start site → query it** end-t
 - **Media types** — `[MediaType]` attribute, `MediaTypeDefinition`, `MediaTypeSyncEngine`; scanner, data-type sync, and pre-flight validation all extended to cover media types
 - **Dictionary items** — `[DictionaryItem]` attribute (field-targeted, on `const string` fields using `nameof` so the C# identifier and the Umbraco `ItemKey` are always identical); `DictionaryItemDefinition`, `DictionaryItemSyncEngine`. Code owns keys/hierarchy only — nested static classes become real parent dictionary items, translations are never written by sync (backoffice/uSync-owned), and existing items are never touched or deleted. `PreFlightValidator` rejects duplicate `ItemKey`s across the whole scan (leaves and auto-created parents share one flat Umbraco namespace)
 - **Languages** — one enum per project carries `[Languages(DefaultLanguage: ...)]`; individual members carry `[Language(IsoCode: "...", Fallback = ..., IsMandatory = ...)]` and are skipped if unattributed (so the enum can hold a sentinel/`None` member or unrelated values). `LanguageSetDefinition`/`LanguageDefinition`, `LanguageSyncEngine`. The enum is the full language roster for the site (existing + new — `Fallback`/`DefaultLanguage` are compile-time-checked references to sibling members, boxed as `object` since an attribute can't be generic over "the enum it's applied to"). Sync is create-only: `GetAsync(isoCode)` is checked first and an existing language (including the built-in `en-US` from installation) is never updated, only ensured to exist; creation order recursively resolves `Fallback` dependencies first. `CultureName` is never authored — derived from `CultureInfo.GetCultureInfo(isoCode)` at creation time. `PreFlightValidator` rejects more than one `[Languages]`-marked enum, a `DefaultLanguage`/`Fallback` that isn't a `[Language]`-attributed sibling, duplicate ISO codes, and fallback cycles/self-references — all pure, offline reflection checks
+- **Backoffice dry-run dashboard** — `CodeFirstSyncService.ComputePlanAsync` extracts the plan computation (content types + media types, same scope as the startup dry-run log) into a serializable `CodeFirstPlanResult` (creates/updates by alias, pruned properties/groups, effective `Strategy`, `Enabled`, and a UTC generation timestamp); `PlanAsync` (the startup path) now just calls it and logs, unchanged. A new Management API controller (`Api/PlanCodeFirstController`, `GET /umbraco/management/api/v1/code-first/plan`) exposes a live computation of the same DTO, authenticated via the inherited `ManagementApiControllerBase` backoffice policies, working regardless of `Enabled`. A Lit dashboard (`wwwroot/App_Plugins/uCodeFirst/plan-dashboard.element.js` + `umbraco-package.json`) registers under the Settings section (`Umb.Section.Settings`), fetches the endpoint on connect, renders creates/updates/prunes with the `NonDestructive`-pruning caveat, and has a "Run dry-run now" button for a fresh on-demand computation. Shipping static backoffice assets required switching `uCodeFirst.csproj`'s SDK to `Microsoft.NET.Sdk.Razor` (Static Web Assets packaging) and adding a `Umbraco.Cms.Api.Management` package reference.
 
 **Package location:** `~/Code/Consid/Consid.Umbraco.CodeFirst`
 **Test project:** `~/Code/Consid/TestProjects/UmbracoTCodeFIrst` (Umbraco 17.4.2, net10.0)
@@ -97,14 +98,7 @@ The smallest slice that proves **write class → start site → query it** end-t
     export is at Umbraco's default), so not urgent — revisit if a concrete need appears. See
     `docs/research/ucodefirst-vs-v17-usync-status.md` gap #6.
 
-11. **Backoffice dry-run dashboard** — screen showing the current `uCodeFirst` plan/diff (creates, updates,
-    prunes per `Strategy`), with a user-triggered "run dry-run now" action for when `Enabled: false`
-    (rather than only seeing the diff at startup, in logs). Needs its own scoping (Umbraco dashboards are
-    a Lit/web-component + package-manifest registration, not part of the sync pipeline). Production safety
-    itself (`Enabled`/`Strategy` in appsettings, always-safe dry-run on `Enabled: false`) is no longer on
-    the roadmap — it's the current `uCodeFirst`/`Strategy` config work, not a deferred item.
-
-12. **Source generator** — removes `_publishedValueFallback` field and `Value<T>` getter boilerplate.
+11. **Source generator** — removes `_publishedValueFallback` field and `Value<T>` getter boilerplate.
     Nice to have, but the manual pattern is workable and a generator adds build-time complexity.
 
 ---

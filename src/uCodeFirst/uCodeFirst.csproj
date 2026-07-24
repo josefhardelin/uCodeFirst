@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk.Razor">
 
   <PropertyGroup>
     <Version>0.1.0-alpha.1</Version>
@@ -19,6 +19,7 @@
 
   <ItemGroup>
     <PackageReference Include="Umbraco.Cms.Web.Common" Version="[17.4.2, 18.0.0)" />
+    <PackageReference Include="Umbraco.Cms.Api.Management" Version="[17.4.2, 18.0.0)" />
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
   </ItemGroup>
 
