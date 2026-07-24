@@ -9,6 +9,7 @@ using Umbraco.Cms.Core.Services.OperationStatus;
 
 namespace uCodeFirst.Tests.Sync;
 
+[TestFixture]
 public class LanguageSyncEngineTests
 {
     [Languages(DefaultLanguage: Lang.English)]
@@ -24,7 +25,7 @@ public class LanguageSyncEngineTests
     private static IReadOnlyList<LanguageSetDefinition> Scan() =>
         new DocumentTypeScanner().ScanLanguages(new[] { typeof(Lang).Assembly });
 
-    [Fact]
+    [Test]
     public async Task SyncAsync_UpdatesExistingLanguage_WhenMandatoryOrFallbackDrifted()
     {
         // sv-SE already exists but with stale IsMandatory/FallbackIsoCode that no longer match
@@ -42,13 +43,13 @@ public class LanguageSyncEngineTests
         var definition = Scan().Single(d => d.EnumType == typeof(Lang));
         await engine.SyncAsync(definition);
 
-        Assert.True(existingSwedish.IsMandatory);
-        Assert.Equal("en-US", existingSwedish.FallbackIsoCode);
-        Assert.Equal(1, service.UpdateCallCount);
-        Assert.Equal(0, service.CreateCallCount);
+        Assert.That(existingSwedish.IsMandatory, Is.True);
+        Assert.That(existingSwedish.FallbackIsoCode, Is.EqualTo("en-US"));
+        Assert.That(service.UpdateCallCount, Is.EqualTo(1));
+        Assert.That(service.CreateCallCount, Is.EqualTo(0));
     }
 
-    [Fact]
+    [Test]
     public async Task SyncAsync_DoesNotUpdate_WhenExistingLanguageAlreadyMatchesCode()
     {
         var existingSwedish = new Language("sv-SE", "Swedish")
@@ -64,8 +65,8 @@ public class LanguageSyncEngineTests
         var definition = Scan().Single(d => d.EnumType == typeof(Lang));
         await engine.SyncAsync(definition);
 
-        Assert.Equal(0, service.UpdateCallCount);
-        Assert.Equal(0, service.CreateCallCount);
+        Assert.That(service.UpdateCallCount, Is.EqualTo(0));
+        Assert.That(service.CreateCallCount, Is.EqualTo(0));
     }
 
     // Minimal fake covering only what LanguageSyncEngine calls (GetAsync/CreateAsync/UpdateAsync).

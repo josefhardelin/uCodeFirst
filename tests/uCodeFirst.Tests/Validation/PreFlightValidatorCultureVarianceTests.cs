@@ -4,6 +4,7 @@ using uCodeFirst.Validation;
 
 namespace uCodeFirst.Tests.Validation;
 
+[TestFixture]
 public class PreFlightValidatorCultureVarianceTests
 {
     private static DocumentTypeDefinition MakeDefinition(bool variesByCulture, bool propertyVariesByCulture)
@@ -37,34 +38,34 @@ public class PreFlightValidatorCultureVarianceTests
             IsContainer: false);
     }
 
-    [Fact]
+    [Test]
     public void CultureVaryingProperty_OnInvariantType_ProducesError()
     {
         var definitions = new[] { MakeDefinition(variesByCulture: false, propertyVariesByCulture: true) };
 
         var errors = new PreFlightValidator().Validate(definitions);
 
-        var error = Assert.Single(errors);
-        Assert.Contains("VariesByCulture", error);
+        Assert.That(errors, Has.Count.EqualTo(1));
+        Assert.That(errors.Single(), Does.Contain("VariesByCulture"));
     }
 
-    [Fact]
+    [Test]
     public void CultureVaryingProperty_OnCultureVaryingType_ProducesNoError()
     {
         var definitions = new[] { MakeDefinition(variesByCulture: true, propertyVariesByCulture: true) };
 
         var errors = new PreFlightValidator().Validate(definitions);
 
-        Assert.Empty(errors);
+        Assert.That(errors, Is.Empty);
     }
 
-    [Fact]
+    [Test]
     public void InvariantProperty_OnInvariantType_ProducesNoError()
     {
         var definitions = new[] { MakeDefinition(variesByCulture: false, propertyVariesByCulture: false) };
 
         var errors = new PreFlightValidator().Validate(definitions);
 
-        Assert.Empty(errors);
+        Assert.That(errors, Is.Empty);
     }
 }

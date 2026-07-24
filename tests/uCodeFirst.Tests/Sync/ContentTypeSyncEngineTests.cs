@@ -15,6 +15,7 @@ using Umbraco.Cms.Core.Strings;
 
 namespace uCodeFirst.Tests.Sync;
 
+[TestFixture]
 public class ContentTypeSyncEngineTests
 {
     private static readonly Guid TypeKey = Guid.Parse("11111111-1111-1111-1111-111111111111");
@@ -67,7 +68,7 @@ public class ContentTypeSyncEngineTests
         return contentType;
     }
 
-    [Fact]
+    [Test]
     public async Task PlanAsync_NewContentType_IsToCreate()
     {
         var service = new FakeContentTypeService();
@@ -75,12 +76,12 @@ public class ContentTypeSyncEngineTests
 
         var plan = await engine.PlanAsync(new[] { Definition(new[] { Property("headline") }) }, CodeFirstStrategy.NonDestructive);
 
-        Assert.Single(plan.ToCreate);
-        Assert.Equal("article", plan.ToCreate[0].Alias);
-        Assert.Empty(plan.ToUpdate);
+        Assert.That(plan.ToCreate, Has.Count.EqualTo(1));
+        Assert.That(plan.ToCreate[0].Alias, Is.EqualTo("article"));
+        Assert.That(plan.ToUpdate, Is.Empty);
     }
 
-    [Fact]
+    [Test]
     public async Task PlanAsync_ExistingContentType_NonDestructive_IsUpdateWithNoPruning()
     {
         var service = new FakeContentTypeService(BuildExistingContentType());
@@ -88,12 +89,12 @@ public class ContentTypeSyncEngineTests
 
         var plan = await engine.PlanAsync(new[] { Definition(new[] { Property("headline") }) }, CodeFirstStrategy.NonDestructive);
 
-        Assert.Single(plan.ToUpdate);
-        Assert.Empty(plan.PrunedProperties);
-        Assert.Empty(plan.PrunedGroups);
+        Assert.That(plan.ToUpdate, Has.Count.EqualTo(1));
+        Assert.That(plan.PrunedProperties, Is.Empty);
+        Assert.That(plan.PrunedGroups, Is.Empty);
     }
 
-    [Fact]
+    [Test]
     public async Task PlanAsync_ExistingContentType_Destructive_ComputesStalePropertiesAndEmptyGroup()
     {
         var service = new FakeContentTypeService(BuildExistingContentType());
@@ -101,15 +102,15 @@ public class ContentTypeSyncEngineTests
 
         var plan = await engine.PlanAsync(new[] { Definition(new[] { Property("headline") }) }, CodeFirstStrategy.Destructive);
 
-        Assert.Equal(2, plan.PrunedProperties.Count);
-        Assert.Contains(plan.PrunedProperties, p => p.PropertyAlias == "legacyField");
-        Assert.Contains(plan.PrunedProperties, p => p.PropertyAlias == "obsoleteProp");
+        Assert.That(plan.PrunedProperties.Count, Is.EqualTo(2));
+        Assert.That(plan.PrunedProperties, Has.Some.Matches<PrunedProperty>(p => p.PropertyAlias == "legacyField"));
+        Assert.That(plan.PrunedProperties, Has.Some.Matches<PrunedProperty>(p => p.PropertyAlias == "obsoleteProp"));
 
-        Assert.Single(plan.PrunedGroups);
-        Assert.Equal("extra", plan.PrunedGroups[0].GroupAlias);
+        Assert.That(plan.PrunedGroups, Has.Count.EqualTo(1));
+        Assert.That(plan.PrunedGroups[0].GroupAlias, Is.EqualTo("extra"));
     }
 
-    [Fact]
+    [Test]
     public async Task SyncAsync_CreatesNewContentType()
     {
         var service = new FakeContentTypeService();
@@ -117,13 +118,13 @@ public class ContentTypeSyncEngineTests
 
         await engine.SyncAsync(new[] { Definition(new[] { Property("headline") }) }, DataTypeByKey(), CodeFirstStrategy.NonDestructive);
 
-        Assert.Equal(1, service.CreateCallCount);
+        Assert.That(service.CreateCallCount, Is.EqualTo(1));
         var created = await service.GetAsync(TypeKey);
-        Assert.NotNull(created);
-        Assert.Contains(created!.PropertyTypes, pt => pt.Alias == "headline");
+        Assert.That(created, Is.Not.Null);
+        Assert.That(created!.PropertyTypes, Has.Some.Matches<IPropertyType>(pt => pt.Alias == "headline"));
     }
 
-    [Fact]
+    [Test]
     public async Task SyncAsync_NonDestructive_NeverRemovesStaleProperties()
     {
         var service = new FakeContentTypeService(BuildExistingContentType());
@@ -132,12 +133,12 @@ public class ContentTypeSyncEngineTests
         await engine.SyncAsync(new[] { Definition(new[] { Property("headline") }) }, DataTypeByKey(), CodeFirstStrategy.NonDestructive);
 
         var updated = await service.GetAsync(TypeKey);
-        Assert.Contains(updated!.PropertyTypes, pt => pt.Alias == "legacyField");
-        Assert.Contains(updated.PropertyTypes, pt => pt.Alias == "obsoleteProp");
-        Assert.Contains(updated.PropertyGroups, g => g.Alias == "extra");
+        Assert.That(updated!.PropertyTypes, Has.Some.Matches<IPropertyType>(pt => pt.Alias == "legacyField"));
+        Assert.That(updated.PropertyTypes, Has.Some.Matches<IPropertyType>(pt => pt.Alias == "obsoleteProp"));
+        Assert.That(updated.PropertyGroups, Has.Some.Matches<PropertyGroup>(g => g.Alias == "extra"));
     }
 
-    [Fact]
+    [Test]
     public async Task SyncAsync_Destructive_RemovesStalePropertiesAndEmptyGroups()
     {
         var service = new FakeContentTypeService(BuildExistingContentType());
@@ -146,11 +147,11 @@ public class ContentTypeSyncEngineTests
         await engine.SyncAsync(new[] { Definition(new[] { Property("headline") }) }, DataTypeByKey(), CodeFirstStrategy.Destructive);
 
         var updated = await service.GetAsync(TypeKey);
-        Assert.Contains(updated!.PropertyTypes, pt => pt.Alias == "headline");
-        Assert.DoesNotContain(updated.PropertyTypes, pt => pt.Alias == "legacyField");
-        Assert.DoesNotContain(updated.PropertyTypes, pt => pt.Alias == "obsoleteProp");
-        Assert.DoesNotContain(updated.PropertyGroups, g => g.Alias == "extra");
-        Assert.Contains(updated.PropertyGroups, g => g.Alias == "content");
+        Assert.That(updated!.PropertyTypes, Has.Some.Matches<IPropertyType>(pt => pt.Alias == "headline"));
+        Assert.That(updated.PropertyTypes, Has.None.Matches<IPropertyType>(pt => pt.Alias == "legacyField"));
+        Assert.That(updated.PropertyTypes, Has.None.Matches<IPropertyType>(pt => pt.Alias == "obsoleteProp"));
+        Assert.That(updated.PropertyGroups, Has.None.Matches<PropertyGroup>(g => g.Alias == "extra"));
+        Assert.That(updated.PropertyGroups, Has.Some.Matches<PropertyGroup>(g => g.Alias == "content"));
     }
 
     // Minimal editor fake, only used to satisfy the DataType constructor — Alias is read via

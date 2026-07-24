@@ -4,6 +4,7 @@ using uCodeFirst.Validation;
 
 namespace uCodeFirst.Tests.Validation;
 
+[TestFixture]
 public class PreFlightValidatorTemplatesTests
 {
     private enum ValidTemplates
@@ -33,7 +34,7 @@ public class PreFlightValidatorTemplatesTests
     private static IReadOnlyList<TemplateDefinition> Scan<TEnum>() where TEnum : struct, Enum =>
         new DocumentTypeScanner().ScanTemplates(new[] { typeof(TEnum).Assembly });
 
-    [Fact]
+    [Test]
     public void MasterChain_WithoutCycle_ProducesNoError()
     {
         var definitions = Scan<ValidTemplates>()
@@ -44,10 +45,10 @@ public class PreFlightValidatorTemplatesTests
             Array.Empty<DocumentTypeDefinition>(),
             templateDefinitions: definitions);
 
-        Assert.Empty(errors);
+        Assert.That(errors, Is.Empty);
     }
 
-    [Fact]
+    [Test]
     public void MasterChain_WithCycle_ProducesError()
     {
         var definitions = Scan<CyclicTemplates>()
@@ -58,10 +59,10 @@ public class PreFlightValidatorTemplatesTests
             Array.Empty<DocumentTypeDefinition>(),
             templateDefinitions: definitions);
 
-        Assert.Contains(errors, e => e.Contains("cycle"));
+        Assert.That(errors, Has.Some.Contains("cycle"));
     }
 
-    [Fact]
+    [Test]
     public void MasterReferencingItself_ProducesCycleError()
     {
         var definitions = Scan<SelfReferencingTemplate>()
@@ -72,6 +73,6 @@ public class PreFlightValidatorTemplatesTests
             Array.Empty<DocumentTypeDefinition>(),
             templateDefinitions: definitions);
 
-        Assert.Contains(errors, e => e.Contains("cycle"));
+        Assert.That(errors, Has.Some.Contains("cycle"));
     }
 }

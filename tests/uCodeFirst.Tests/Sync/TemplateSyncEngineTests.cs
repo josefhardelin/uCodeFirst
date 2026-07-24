@@ -10,6 +10,7 @@ using Umbraco.Cms.Core.Services.OperationStatus;
 
 namespace uCodeFirst.Tests.Sync;
 
+[TestFixture]
 public class TemplateSyncEngineTests
 {
     private enum Templates
@@ -26,7 +27,7 @@ public class TemplateSyncEngineTests
             .Where(d => d.Member.DeclaringType == typeof(Templates))
             .ToList();
 
-    [Fact]
+    [Test]
     public async Task SyncAsync_UpdatesTemplateMaster_WhenLayoutLineDiffers()
     {
         var layout = new FakeTemplate("_layout", masterAlias: null, content: null);
@@ -37,14 +38,14 @@ public class TemplateSyncEngineTests
 
         await engine.SyncAsync(Scan());
 
-        Assert.Equal(1, service.UpdateCallCount);
-        Assert.Equal(0, service.CreateCallCount);
-        Assert.Contains("Layout = \"_layout.cshtml\";", page.Content);
-        Assert.DoesNotContain("_oldmaster", page.Content);
-        Assert.Contains("<h1>Page</h1>", page.Content);
+        Assert.That(service.UpdateCallCount, Is.EqualTo(1));
+        Assert.That(service.CreateCallCount, Is.EqualTo(0));
+        Assert.That(page.Content, Does.Contain("Layout = \"_layout.cshtml\";"));
+        Assert.That(page.Content, Does.Not.Contain("_oldmaster"));
+        Assert.That(page.Content, Does.Contain("<h1>Page</h1>"));
     }
 
-    [Fact]
+    [Test]
     public async Task SyncAsync_DoesNotUpdate_WhenMasterAlreadyMatches()
     {
         var layout = new FakeTemplate("_layout", masterAlias: null, content: null);
@@ -55,11 +56,11 @@ public class TemplateSyncEngineTests
 
         await engine.SyncAsync(Scan());
 
-        Assert.Equal(0, service.UpdateCallCount);
-        Assert.Equal(0, service.CreateCallCount);
+        Assert.That(service.UpdateCallCount, Is.EqualTo(0));
+        Assert.That(service.CreateCallCount, Is.EqualTo(0));
     }
 
-    [Fact]
+    [Test]
     public async Task SyncAsync_LeavesTemplateAsIs_WhenLayoutDirectiveCannotBeLocated()
     {
         var layout = new FakeTemplate("_layout", masterAlias: null, content: null);
@@ -72,8 +73,8 @@ public class TemplateSyncEngineTests
 
         await engine.SyncAsync(Scan());
 
-        Assert.Equal(0, service.UpdateCallCount);
-        Assert.Equal("@inherits SomeBase\n<h1>No layout directive here</h1>", page.Content);
+        Assert.That(service.UpdateCallCount, Is.EqualTo(0));
+        Assert.That(page.Content, Is.EqualTo("@inherits SomeBase\n<h1>No layout directive here</h1>"));
     }
 
     // Minimal fake covering only what TemplateSyncEngine reads/writes: Alias, MasterTemplateAlias,

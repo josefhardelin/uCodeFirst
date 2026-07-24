@@ -3,18 +3,19 @@ using Microsoft.Extensions.Configuration;
 
 namespace uCodeFirst.Tests.Configuration;
 
+[TestFixture]
 public class CodeFirstOptionsTests
 {
-    [Fact]
+    [Test]
     public void Defaults_WhenNoConfigSectionPresent_MatchTodaysBehavior()
     {
         var options = new CodeFirstOptions();
 
-        Assert.True(options.Enabled);
-        Assert.Equal(CodeFirstStrategy.NonDestructive, options.Strategy);
+        Assert.That(options.Enabled, Is.True);
+        Assert.That(options.Strategy, Is.EqualTo(CodeFirstStrategy.NonDestructive));
     }
 
-    [Fact]
+    [Test]
     public void Binds_FromUCodeFirstSection()
     {
         var config = new ConfigurationBuilder()
@@ -28,11 +29,11 @@ public class CodeFirstOptionsTests
         var options = new CodeFirstOptions();
         config.GetSection("uCodeFirst").Bind(options);
 
-        Assert.False(options.Enabled);
-        Assert.Equal(CodeFirstStrategy.Destructive, options.Strategy);
+        Assert.That(options.Enabled, Is.False);
+        Assert.That(options.Strategy, Is.EqualTo(CodeFirstStrategy.Destructive));
     }
 
-    [Fact]
+    [Test]
     public void Binds_PartialSection_KeepsUnspecifiedDefaults()
     {
         var config = new ConfigurationBuilder()
@@ -45,7 +46,7 @@ public class CodeFirstOptionsTests
         var options = new CodeFirstOptions();
         config.GetSection("uCodeFirst").Bind(options);
 
-        Assert.True(options.Enabled);
-        Assert.Equal(CodeFirstStrategy.Destructive, options.Strategy);
+        Assert.That(options.Enabled, Is.True);
+        Assert.That(options.Strategy, Is.EqualTo(CodeFirstStrategy.Destructive));
     }
 }

@@ -14,6 +14,7 @@ using DataType = Umbraco.Cms.Core.Models.DataType;
 
 namespace uCodeFirst.Tests.Sync;
 
+[TestFixture]
 public class DataTypeSyncEngineTests
 {
     [uCodeFirst.Attributes.DataType("Colours", Guid = "3fa85f64-5717-4562-b3fc-2c963f66afa6")]
@@ -34,7 +35,7 @@ public class DataTypeSyncEngineTests
 
     private static Guid ColoursKey => Guid.Parse("3fa85f64-5717-4562-b3fc-2c963f66afa6");
 
-    [Fact]
+    [Test]
     public async Task EnsureDataTypesAsync_UpdatesExistingDataType_WhenConfigDiffers()
     {
         var editor = new FakeDataEditor("Umbraco.DropDown.Flexible");
@@ -50,13 +51,13 @@ public class DataTypeSyncEngineTests
 
         var result = await engine.EnsureDataTypesAsync(Scan());
 
-        Assert.Equal(1, service.UpdateCallCount);
-        Assert.Equal(0, service.CreateCallCount);
-        Assert.Same(existing, result[ColoursKey]);
-        Assert.Equal(new List<object> { "Red", "Blue" }, existing.ConfigurationData["items"]);
+        Assert.That(service.UpdateCallCount, Is.EqualTo(1));
+        Assert.That(service.CreateCallCount, Is.EqualTo(0));
+        Assert.That(result[ColoursKey], Is.SameAs(existing));
+        Assert.That(existing.ConfigurationData["items"], Is.EqualTo(new List<object> { "Red", "Blue" }));
     }
 
-    [Fact]
+    [Test]
     public async Task EnsureDataTypesAsync_DoesNotUpdate_WhenConfigUnchanged()
     {
         var editor = new FakeDataEditor("Umbraco.DropDown.Flexible");
@@ -77,8 +78,8 @@ public class DataTypeSyncEngineTests
 
         await engine.EnsureDataTypesAsync(Scan());
 
-        Assert.Equal(0, service.UpdateCallCount);
-        Assert.Equal(0, service.CreateCallCount);
+        Assert.That(service.UpdateCallCount, Is.EqualTo(0));
+        Assert.That(service.CreateCallCount, Is.EqualTo(0));
     }
 
     private sealed class FakeDataEditor(string alias) : IDataEditor

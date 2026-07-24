@@ -26,6 +26,7 @@ namespace uCodeFirst.Tests;
 // validation for every test, including ones that need a clean scan. That "valid" routing (Enabled
 // applies via CreateAsync, Disabled never calls it) is already covered directly at the engine level by
 // ContentTypeSyncEngineTests. This file only needs a permanent validation failure, so it sticks to that.
+[TestFixture]
 public class CodeFirstStartupHandlerTests
 {
     private static readonly IShortStringHelper Helper = new DefaultShortStringHelper(Options.Create(new RequestHandlerSettings()));
@@ -56,7 +57,7 @@ public class CodeFirstStartupHandlerTests
         return new CodeFirstStartupHandler(syncService, runtimeState, Options.Create(options), NullLogger<CodeFirstStartupHandler>.Instance);
     }
 
-    [Fact]
+    [Test]
     public async Task HandleAsync_RuntimeLevelNotRun_SkipsEntirely()
     {
         var contentTypeService = new FakeContentTypeService();
@@ -64,30 +65,28 @@ public class CodeFirstStartupHandlerTests
 
         await handler.HandleAsync(new UmbracoApplicationStartedNotification(isRestarting: false), CancellationToken.None);
 
-        Assert.Equal(0, contentTypeService.CreateCallCount);
+        Assert.That(contentTypeService.CreateCallCount, Is.EqualTo(0));
     }
 
-    [Fact]
-    public async Task HandleAsync_Enabled_ValidationFails_Throws()
+    [Test]
+    public void HandleAsync_Enabled_ValidationFails_Throws()
     {
         var contentTypeService = new FakeContentTypeService();
         var handler = BuildHandler(contentTypeService, new FakeRuntimeState(RuntimeLevel.Run), new CodeFirstOptions { Enabled = true });
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+        Assert.ThrowsAsync<InvalidOperationException>(() =>
             handler.HandleAsync(new UmbracoApplicationStartedNotification(isRestarting: false), CancellationToken.None));
     }
 
-    [Fact]
-    public async Task HandleAsync_Disabled_ValidationFails_DoesNotThrow()
+    [Test]
+    public void HandleAsync_Disabled_ValidationFails_DoesNotThrow()
     {
         var contentTypeService = new FakeContentTypeService();
         var handler = BuildHandler(contentTypeService, new FakeRuntimeState(RuntimeLevel.Run), new CodeFirstOptions { Enabled = false });
 
-        var exception = await Record.ExceptionAsync(() =>
+        Assert.DoesNotThrowAsync(() =>
             handler.HandleAsync(new UmbracoApplicationStartedNotification(isRestarting: false), CancellationToken.None));
-
-        Assert.Null(exception);
-        Assert.Equal(0, contentTypeService.CreateCallCount);
+        Assert.That(contentTypeService.CreateCallCount, Is.EqualTo(0));
     }
 
     private sealed class FakeRuntimeState : IRuntimeState
