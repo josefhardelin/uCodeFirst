@@ -23,6 +23,7 @@ The smallest slice that proves **write class → start site → query it** end-t
 ### Done ✓
 
 **MVP core**
+
 - All 7 editor attributes: `[TextString]`, `[TextArea]`, `[RichText]`, `[Numeric]`, `[TrueFalse]`, `[DatePicker]`, `[Dropdown]`
 - `[DocumentType(Guid, Name, Alias?, Icon?, Description?, AllowedAtRoot, Folder?, DefaultTemplate?)]`
 - `[AllowedChildren(params Type[])]`
@@ -37,6 +38,7 @@ The smallest slice that proves **write class → start site → query it** end-t
 - `AddCodeFirst()` extension on `IUmbracoBuilder`
 
 **Extras shipped with MVP**
+
 - **Folder support** — `Folder` param on `[DocumentType]`; `EntityContainer` hierarchy with deterministic GUIDs (MD5 of path) for idempotency
 - **Template linking** — `DefaultTemplate` param on `[DocumentType]`; looks up template by alias via `ITemplateService`, creates DB entry if missing, wires `AllowedTemplates` + `DefaultTemplateId`
 - **View scaffolding** — test project has `@inherits UmbracoViewPage<T>` views, `_Layout`, `_ViewImports`
@@ -97,7 +99,7 @@ The smallest slice that proves **write class → start site → query it** end-t
     export is at Umbraco's default), so not urgent — revisit if a concrete need appears. See
     `docs/research/ucodefirst-vs-v17-usync-status.md` gap #6.
 
-11. **Backoffice dry-run dashboard** — screen showing the current `uCodeFirst` plan/diff (creates, updates,
+11. **Backoffice dry-run dashboard** — screen showing the current `uCodeFirst` plan/diff (creates, updates ,
     prunes per `Strategy`), with a user-triggered "run dry-run now" action for when `Enabled: false`
     (rather than only seeing the diff at startup, in logs). Needs its own scoping (Umbraco dashboards are
     a Lit/web-component + package-manifest registration, not part of the sync pipeline). Production safety
