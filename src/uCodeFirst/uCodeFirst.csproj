@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk.Razor">
 
   <PropertyGroup>
+    <StaticWebAssetBasePath>/</StaticWebAssetBasePath>
     <Version>0.1.0-alpha.1</Version>
     <Authors>Josef Härdelin</Authors>
     <Description>Code-first schema authoring for Umbraco CMS 17+. Define document types as C#

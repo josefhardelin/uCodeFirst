@@ -9,7 +9,7 @@ namespace Basicv17.Models;
 // matching StartPage's DefaultTemplate: "startPage" (see Pages/StartPage.cs).
 public enum Templates
 {
-    [Template(Alias: "_layout")]
+    [Template(Alias: "_Layout")]
     Layout,
 
     [Template(Alias: "startPage", Master = Layout)]

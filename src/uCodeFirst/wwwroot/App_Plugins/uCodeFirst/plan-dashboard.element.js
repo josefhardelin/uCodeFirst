@@ -1,10 +1,13 @@
 import { html, css, nothing } from '@umbraco-cms/backoffice/external/lit';
 import { UmbLitElement } from '@umbraco-cms/backoffice/lit-element';
+import { UMB_AUTH_CONTEXT } from '@umbraco-cms/backoffice/auth';
 
 // GET /umbraco/management/api/v1/code-first/plan — served by uCodeFirst.Api.PlanCodeFirstController.
-// Same-origin fetch with credentials:'include' rides the backoffice's httpOnly auth cookie, the same
-// way the backoffice's own generated API client authenticates (see @umbraco-cms/backoffice/http-client,
-// which configures the shared client with credentials:'include' for exactly this reason).
+// The Management API's [Authorize(Policy = "BackOfficeAccess")] requires an Authorization header even
+// under cookie-based auth (the server recognizes the sentinel token and authenticates via the httpOnly
+// cookie) — a plain credentials:'include' fetch with no Authorization header is rejected with 401.
+// UmbAuthContext.getOpenApiConfiguration() is the documented way to build a manual, authenticated fetch
+// (see @umbraco-cms/backoffice/auth's UmbAuthContext — getLatestToken()/getOpenApiConfiguration() JSDoc).
 const PLAN_ENDPOINT = '/umbraco/management/api/v1/code-first/plan';
 
 /**
@@ -28,6 +31,7 @@ class UCodeFirstPlanDashboardElement extends UmbLitElement {
 		this._loading = false;
 		this._error = null;
 		this._plan = null;
+		this._authContext = null;
 	}
 
 	connectedCallback() {
@@ -39,10 +43,14 @@ class UCodeFirstPlanDashboardElement extends UmbLitElement {
 		this._loading = true;
 		this._error = null;
 		try {
-			const response = await fetch(PLAN_ENDPOINT, {
+			this._authContext ??= await this.getContext(UMB_AUTH_CONTEXT);
+			if (!this._authContext) throw new Error('uCodeFirst dashboard requires the backoffice auth context.');
+
+			const { base, credentials, token } = this._authContext.getOpenApiConfiguration();
+			const response = await fetch(`${base}${PLAN_ENDPOINT}`, {
 				method: 'GET',
-				credentials: 'include',
-				headers: { Accept: 'application/json' },
+				credentials,
+				headers: { Accept: 'application/json', Authorization: `Bearer ${await token()}` },
 			});
 
 			if (!response.ok) {
