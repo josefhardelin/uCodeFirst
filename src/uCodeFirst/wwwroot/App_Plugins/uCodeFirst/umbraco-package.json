@@ -1,0 +1,24 @@
+{
+  "name": "uCodeFirst",
+  "version": "0.1.0",
+  "extensions": [
+    {
+      "type": "dashboard",
+      "alias": "uCodeFirst.Dashboard.PlanDashboard",
+      "name": "uCodeFirst Plan Dashboard",
+      "js": "/App_Plugins/uCodeFirst/plan-dashboard.element.js",
+      "elementName": "ucodefirst-plan-dashboard",
+      "weight": -100,
+      "meta": {
+        "label": "uCodeFirst",
+        "pathname": "ucodefirst"
+      },
+      "conditions": [
+        {
+          "alias": "Umb.Condition.SectionAlias",
+          "match": "Umb.Section.Settings"
+        }
+      ]
+    }
+  ]
+}
