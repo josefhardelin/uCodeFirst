@@ -206,8 +206,9 @@ This keeps production schema changes deliberate and uSync-controlled.
 - [x] Roslyn analyzer (UCF001 — build error on missing GUID, with code fixer)
 - [x] Media types
 - [x] Dictionary items (keys/hierarchy only — code owns structure, translations are backoffice/uSync-owned)
+- [x] Languages
+- [x] Backoffice dry-run dashboard (Settings-section Lit dashboard showing the live create/update/prune plan, with a manual "run dry-run now" trigger)
 - [ ] Dictionary item coverage dashboard (backoffice screen showing code-grounded vs. backoffice-only keys, translation status per culture)
-- [ ] Languages
 - [ ] member types
 - [ ] Property type validation — UCF002 analyzer + `PreFlightValidator` check that the C# property return type matches the data type (e.g. `[TrueFalse]` must be on a `bool?`)
 - [ ] Source generator (removes explicit getter boilerplate)

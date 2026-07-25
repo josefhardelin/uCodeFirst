@@ -26,7 +26,7 @@ Target framework is `net10.0` across all projects (set in `Directory.Build.props
 
 ## Architecture
 
-This is a library (`src/uCodeFirst`) that syncs C# class definitions into an Umbraco 17+ database on startup. The test project lives in `tests/uCodeFirst.Tests`. A sample Umbraco site sits in `samples/Basicv17`.
+This is a library (`src/uCodeFirst`) that syncs C# class definitions into an Umbraco 17+ database on startup. The test project lives in `tests/uCodeFirst.Tests` (NUnit). A sample Umbraco site sits in `samples/Basicv17`.
 
 ### Startup flow
 
@@ -55,6 +55,10 @@ Compositions are modelled as C# interfaces marked with `[CompositionType]`. A do
 ### Folders
 
 Backoffice folder paths (e.g. `"Pages/Articles"`) are specified on `[DocumentType(Folder: "...")]`. Folder GUIDs are derived deterministically via MD5 from `consid.codefirst:folder:<path>` so they are stable across restarts.
+
+### Backoffice dry-run dashboard
+
+`CodeFirstSyncService.ComputePlanAsync` computes the same create/update/prune plan the startup log prints, but returns it as a serializable `CodeFirstPlanResult` instead of only logging it. `Api/PlanCodeFirstController` (`GET /umbraco/management/api/v1/code-first/plan`) exposes a live computation of that DTO, authenticated via the inherited `ManagementApiControllerBase` backoffice policies, and works regardless of the `Enabled` setting. A Lit web component (`src/uCodeFirst/wwwroot/App_Plugins/uCodeFirst/plan-dashboard.element.js` + `umbraco-package.json`) registers under the Settings section and renders the plan, with a manual "run dry-run now" button. Shipping these static backoffice assets required switching `uCodeFirst.csproj` to the `Microsoft.NET.Sdk.Razor` SDK (Static Web Assets packaging) and adding an `Umbraco.Cms.Api.Management` package reference.
 
 ## Verification
 

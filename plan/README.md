@@ -56,5 +56,7 @@ uSync is cloned side-by-side as the deployment partner.
 
 ## Status
 
-Design/feasibility exploration. No code written yet. Next step after sign-off: scaffold the package
-and build the MVP vertical slice (see [mvp-and-roadmap.md](mvp-and-roadmap.md)).
+Past design/feasibility exploration — the MVP vertical slice is built and shipped, along with several
+extras beyond the original MVP scope (media types, dictionary items, languages, compositions, element
+types + Block List/Grid, a Roslyn analyzer, and a backoffice dry-run dashboard). See
+[mvp-and-roadmap.md](mvp-and-roadmap.md) for what's done and what's still deferred.

@@ -39,6 +39,10 @@ The smallest slice that proves **write class → start site → query it** end-t
 
 **Extras shipped with MVP**
 
+- **Element types + Block List + Block Grid** — `[ElementType]` attribute (element types are content types used as Block List/Grid item content, not standalone tree nodes); `BlockListDataType`/`BlockGridDataType` config classes wire GUID cross-refs to the element types allowed in a block
+- **Compositions & inheritance** — `[CompositionType]` interfaces; `ContentTypeSyncEngine`'s three-pass sync (create/update types and folders → wire `AllowedChildren` → wire compositions); `PreFlightValidator` checks property-alias collisions across composed types
+- **Roslyn analyzer** — `uCodeFirst.Analyzers` project, `UCF001` (`MissingGuidAnalyzer`): build error when a `[DocumentType]`/`[ElementType]`/`[MediaType]` GUID is missing, with a code fixer that generates one
+- **Code-first data type classes** — `DataTypeBase` is the abstract base every property-editor attribute (`[TextString]`, `[RichText]`, etc.) derives from; paired with `[DataType]` it's also a public extensibility point, letting consumers author their own property-editor attributes for editors beyond the built-in seven
 - **Folder support** — `Folder` param on `[DocumentType]`; `EntityContainer` hierarchy with deterministic GUIDs (MD5 of path) for idempotency
 - **Template linking** — `DefaultTemplate` param on `[DocumentType]`; looks up template by alias via `ITemplateService`, creates DB entry if missing, wires `AllowedTemplates` + `DefaultTemplateId`
 - **View scaffolding** — test project has `@inherits UmbracoViewPage<T>` views, `_Layout`, `_ViewImports`
@@ -46,6 +50,7 @@ The smallest slice that proves **write class → start site → query it** end-t
 - **Dictionary items** — `[DictionaryItem]` attribute (field-targeted, on `const string` fields using `nameof` so the C# identifier and the Umbraco `ItemKey` are always identical); `DictionaryItemDefinition`, `DictionaryItemSyncEngine`. Code owns keys/hierarchy only — nested static classes become real parent dictionary items, translations are never written by sync (backoffice/uSync-owned), and existing items are never touched or deleted. `PreFlightValidator` rejects duplicate `ItemKey`s across the whole scan (leaves and auto-created parents share one flat Umbraco namespace)
 - **Languages** — one enum per project carries `[Languages(DefaultLanguage: ...)]`; individual members carry `[Language(IsoCode: "...", Fallback = ..., IsMandatory = ...)]` and are skipped if unattributed (so the enum can hold a sentinel/`None` member or unrelated values). `LanguageSetDefinition`/`LanguageDefinition`, `LanguageSyncEngine`. The enum is the full language roster for the site (existing + new — `Fallback`/`DefaultLanguage` are compile-time-checked references to sibling members, boxed as `object` since an attribute can't be generic over "the enum it's applied to"). Sync is create-only: `GetAsync(isoCode)` is checked first and an existing language (including the built-in `en-US` from installation) is never updated, only ensured to exist; creation order recursively resolves `Fallback` dependencies first. `CultureName` is never authored — derived from `CultureInfo.GetCultureInfo(isoCode)` at creation time. `PreFlightValidator` rejects more than one `[Languages]`-marked enum, a `DefaultLanguage`/`Fallback` that isn't a `[Language]`-attributed sibling, duplicate ISO codes, and fallback cycles/self-references — all pure, offline reflection checks
 - **Backoffice dry-run dashboard** — `CodeFirstSyncService.ComputePlanAsync` extracts the plan computation (content types + media types, same scope as the startup dry-run log) into a serializable `CodeFirstPlanResult` (creates/updates by alias, pruned properties/groups, effective `Strategy`, `Enabled`, and a UTC generation timestamp); `PlanAsync` (the startup path) now just calls it and logs, unchanged. A new Management API controller (`Api/PlanCodeFirstController`, `GET /umbraco/management/api/v1/code-first/plan`) exposes a live computation of the same DTO, authenticated via the inherited `ManagementApiControllerBase` backoffice policies, working regardless of `Enabled`. A Lit dashboard (`wwwroot/App_Plugins/uCodeFirst/plan-dashboard.element.js` + `umbraco-package.json`) registers under the Settings section (`Umb.Section.Settings`), fetches the endpoint on connect, renders creates/updates/prunes with the `NonDestructive`-pruning caveat, and has a "Run dry-run now" button for a fresh on-demand computation. Shipping static backoffice assets required switching `uCodeFirst.csproj`'s SDK to `Microsoft.NET.Sdk.Razor` (Static Web Assets packaging) and adding a `Umbraco.Cms.Api.Management` package reference.
+- **Test project migrated from xUnit to NUnit** — `tests/uCodeFirst.Tests` now references `NUnit`/`NUnit3TestAdapter` instead of xUnit, clearing the way to later host Umbraco's own SQLite-backed `Umbraco.Cms.Tests.Integration` suite (NUnit-only) in the same project without a split framework. See `docs/research/testing-strategy.md`.
 
 **Package location:** `~/Code/Consid/Consid.Umbraco.CodeFirst`
 **Test project:** `~/Code/Consid/TestProjects/UmbracoTCodeFIrst` (Umbraco 17.4.2, net10.0)
@@ -54,13 +59,7 @@ The smallest slice that proves **write class → start site → query it** end-t
 
 ## Roadmap — deferred, in priority order
 
-1. **Switch `tests/uCodeFirst.Tests` from xUnit to NUnit** — future-proofing move so the test project can
-   later host Umbraco's own SQLite-backed integration tests (`Umbraco.Cms.Tests.Integration`) without a
-   split framework. Umbraco's test infra (`UmbracoIntegrationTest`, builders) is NUnit-only — confirmed
-   via Umbraco-CMS `release-17.5.3` source and uSync's own v17 test suite, which uses NUnit for exactly
-   this reason. See `docs/research/testing-strategy.md`.
-
-2. **Unit tests for `DocumentTypeScanner`, `PreFlightValidator`, and the sync engines** — both scanner and
+1. **Unit tests for `DocumentTypeScanner`, `PreFlightValidator`, and the sync engines** — both scanner and
    validator are pure logic with zero Umbraco dependency (plain reflection over records), so they're
    testable today with in-memory fixture assemblies and no mocking. Goal: replace the "boot Basicv17,
    click through the backoffice" verification loop with a fast local test run for scanner/validator
@@ -71,36 +70,30 @@ The smallest slice that proves **write class → start site → query it** end-t
    (`ContentTypeSyncEngine`, `MediaTypeSyncEngine`, `DataTypeSyncEngine`) are still open — see
    `docs/research/ucodefirst-vs-v17-usync-status.md` gap #11.
 
-3. **Element types + Block List + Block Grid** — the high-value vision; nested content patterns.
-   Needs: `[ElementType]` attribute, Block List/Grid data type config, GUID cross-refs to element types.
+2. **Configured pickers with dynamic root** — the Tier-1 instance-reference solution (Q2).
 
-4. **Compositions & inheritance** — C# interfaces → Umbraco compositions (mixins); base class → doctype
-   inheritance (single parent). Validation must check property-alias collisions across composed types.
-
-5. **Configured pickers with dynamic root** — the Tier-1 instance-reference solution (Q2).
-
-6. **Member types & relation types.** (Media types ✓ done, Dictionary items ✓ done, Languages ✓ done — see
+3. **Member types & relation types.** (Media types ✓ done, Dictionary items ✓ done, Languages ✓ done — see
    above.) No export evidence of anything custom to reproduce (built-in `Member` type + 2 Umbraco
    Forms/Members-ecosystem relation types only), but member types are a different domain (member/auth
    schema, not content schema) that would need its own design pass if a real need shows up. See
    `docs/research/ucodefirst-vs-v17-usync-status.md` gap #10.
 
-7. **Dictionary item coverage dashboard** — backoffice screen showing which keys are code-grounded vs.
+4. **Dictionary item coverage dashboard** — backoffice screen showing which keys are code-grounded vs.
    backoffice-only, and which have translations for which cultures. Split out of the dictionary items
    work above; needs its own scoping (Umbraco dashboards are a Lit/web-component + package-manifest
    registration, not part of the sync pipeline).
 
-8. **Content seeding** — deterministic-GUID singleton nodes (Tier-2 picker answer, Q2).
+5. **Content seeding** — deterministic-GUID singleton nodes (Tier-2 picker answer, Q2).
 
-9. **Segment variance** — culture variance shipped (`VariesByCulture` on `[DocumentType]`/`[ElementType]`
+6. **Segment variance** — culture variance shipped (`VariesByCulture` on `[DocumentType]`/`[ElementType]`
    and per-property on `DataTypeBase`), segment/culture+segment variation is still open.
 
-10. **HistoryCleanup policy** — `PreventCleanup`/`KeepAllVersionsNewerThanDays`/`KeepLatestVersionPerDayForDays`
+7. **HistoryCleanup policy** — `PreventCleanup`/`KeepAllVersionsNewerThanDays`/`KeepLatestVersionPerDayForDays`
     on content types. No export evidence of anyone customizing it (every content type in the reference
     export is at Umbraco's default), so not urgent — revisit if a concrete need appears. See
     `docs/research/ucodefirst-vs-v17-usync-status.md` gap #6.
 
-11. **Source generator** — removes `_publishedValueFallback` field and `Value<T>` getter boilerplate.
+8. **Source generator** — removes `_publishedValueFallback` field and `Value<T>` getter boilerplate.
     Nice to have, but the manual pattern is workable and a generator adds build-time complexity.
 
 ---

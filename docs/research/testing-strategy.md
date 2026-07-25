@@ -1,6 +1,10 @@
 # Testing Strategy for uCodeFirst
 
 **Researched:** 2026-07-20
+**Update (2026-07-25):** `tests/uCodeFirst.Tests` has since been migrated wholesale from xUnit to NUnit
+(see [mvp-and-roadmap.md](../../plan/mvp-and-roadmap.md)), following the "second option" below rather than
+adding a separate NUnit project — the rest of this document's analysis (sections 1-4, package/sketch
+recommendations) still reflects the research as originally written and is otherwise unchanged.
 **Goal:** Stop verifying sync behavior by booting `samples/Basicv17` and clicking through the backoffice. Establish a layered automated test strategy: pure unit tests for reflection/validation logic (no Umbraco at all), interface-mocked tests for the sync engines, and — if worthwhile — a thin slice of real SQLite-backed integration tests for the riskiest paths.
 
 ## Executive summary
