@@ -68,7 +68,10 @@ internal sealed class DocumentTypeScanner
                 Properties: ScanClassProperties(type, compositionPropNames),
                 CompositionKeys: compositionKeys,
                 VariesByCulture: attr.VariesByCulture,
-                IsContainer: attr.IsContainer));
+                IsContainer: attr.IsContainer,
+                PreventCleanup: attr.PreventCleanup,
+                KeepAllVersionsNewerThanDays: attr.KeepAllVersionsNewerThanDays,
+                KeepLatestVersionPerDayForDays: attr.KeepLatestVersionPerDayForDays));
         }
 
         // Element types from classes
@@ -343,6 +346,33 @@ internal sealed class DocumentTypeScanner
                 var master = ResolveEnumMember(enumType, templateAttr.Master);
                 definitions.Add(new TemplateDefinition(field, templateAttr.Alias, master));
             }
+        }
+
+        return definitions;
+    }
+
+    public IReadOnlyList<SeedContentDefinition> ScanSeedContent(IEnumerable<Assembly> assemblies)
+    {
+        var definitions = new List<SeedContentDefinition>();
+
+        var allTypes = assemblies
+            .SelectMany(a =>
+            {
+                try { return a.GetTypes(); }
+                catch (ReflectionTypeLoadException ex) { return ex.Types.OfType<Type>(); }
+            })
+            .ToList();
+
+        foreach (var type in allTypes.Where(t => t is { IsClass: true, IsAbstract: false } && t.IsDefined(typeof(SeedContentAttribute))))
+        {
+            var attr = type.GetCustomAttribute<SeedContentAttribute>()!;
+
+            definitions.Add(new SeedContentDefinition(
+                ClrType: type,
+                Key: attr.Key,
+                DocumentType: attr.DocumentType,
+                Name: attr.Name,
+                Parent: attr.Parent));
         }
 
         return definitions;

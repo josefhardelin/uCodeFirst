@@ -51,6 +51,9 @@ The smallest slice that proves **write class → start site → query it** end-t
 - **Languages** — one enum per project carries `[Languages(DefaultLanguage: ...)]`; individual members carry `[Language(IsoCode: "...", Fallback = ..., IsMandatory = ...)]` and are skipped if unattributed (so the enum can hold a sentinel/`None` member or unrelated values). `LanguageSetDefinition`/`LanguageDefinition`, `LanguageSyncEngine`. The enum is the full language roster for the site (existing + new — `Fallback`/`DefaultLanguage` are compile-time-checked references to sibling members, boxed as `object` since an attribute can't be generic over "the enum it's applied to"). Sync is create-only: `GetAsync(isoCode)` is checked first and an existing language (including the built-in `en-US` from installation) is never updated, only ensured to exist; creation order recursively resolves `Fallback` dependencies first. `CultureName` is never authored — derived from `CultureInfo.GetCultureInfo(isoCode)` at creation time. `PreFlightValidator` rejects more than one `[Languages]`-marked enum, a `DefaultLanguage`/`Fallback` that isn't a `[Language]`-attributed sibling, duplicate ISO codes, and fallback cycles/self-references — all pure, offline reflection checks
 - **Backoffice dry-run dashboard** — `CodeFirstSyncService.ComputePlanAsync` extracts the plan computation (content types + media types, same scope as the startup dry-run log) into a serializable `CodeFirstPlanResult` (creates/updates by alias, pruned properties/groups, effective `Strategy`, `Enabled`, and a UTC generation timestamp); `PlanAsync` (the startup path) now just calls it and logs, unchanged. A new Management API controller (`Api/PlanCodeFirstController`, `GET /umbraco/management/api/v1/code-first/plan`) exposes a live computation of the same DTO, authenticated via the inherited `ManagementApiControllerBase` backoffice policies, working regardless of `Enabled`. A Lit dashboard (`wwwroot/App_Plugins/uCodeFirst/plan-dashboard.element.js` + `umbraco-package.json`) registers under the Settings section (`Umb.Section.Settings`), fetches the endpoint on connect, renders creates/updates/prunes with the `NonDestructive`-pruning caveat, and has a "Run dry-run now" button for a fresh on-demand computation. Shipping static backoffice assets required switching `uCodeFirst.csproj`'s SDK to `Microsoft.NET.Sdk.Razor` (Static Web Assets packaging) and adding a `Umbraco.Cms.Api.Management` package reference.
 - **Test project migrated from xUnit to NUnit** — `tests/uCodeFirst.Tests` now references `NUnit`/`NUnit3TestAdapter` instead of xUnit, clearing the way to later host Umbraco's own SQLite-backed `Umbraco.Cms.Tests.Integration` suite (NUnit-only) in the same project without a split framework. See `docs/research/testing-strategy.md`.
+- **HistoryCleanup policy** — `PreventCleanup`/`KeepAllVersionsNewerThanDays`/`KeepLatestVersionPerDayForDays` params on `[DocumentType]` (content types only — `[ElementType]`/`[MediaType]` are out of scope, matching Umbraco's own `MediaType` model, which has no `HistoryCleanup` property). Threaded through `DocumentTypeDefinition` and set on the underlying `ContentType.HistoryCleanup` by `ContentTypeSyncEngine` on both create (new instance) and update (mutated in place, matching the rest of `UpdateAsync`'s field-by-field style). Unset values default to Umbraco's own defaults (`PreventCleanup: false`, both day-counts `null`) rather than introducing a separate "don't touch this" sentinel.
+- **Configured pickers with dynamic root** — `MultiNodeTreePickerDataType`/`ContentPickerDataType` (not `MediaPicker3DataType` — different start-node model, out of scope) gain `Type[] AllowedContentTypes`, resolved via `[DocumentType]` reflection into Umbraco's comma-separated alias `filter`/`Filter` config (mirroring `Umbraco.Cms.Core.PropertyEditors.MultiNodePickerConfiguration.Filter`); this replaces `ContentPickerDataType`'s old string-alias `Filter` property (a deliberate breaking change — pre-1.0, `0.1.0-alpha.1`, no external consumers). `MultiNodeTreePickerDataType` additionally gains `DynamicRootConfig? DynamicRoot` (new `DataTypes/DynamicRootConfig.cs`): a closed `DynamicRootOrigin` enum (`Root`/`Site`/`Current`/`Parent`/`ContentRoot`) plus `DynamicRootQueryStep`/`DynamicRootQueryStepDirection`, populating the real `startNode.dynamicRoot`/`querySteps` shape (`Umbraco.Cms.Core.PropertyEditors.DynamicRoot`/`QueryStep`) with the literal `originAlias`/step `alias` strings confirmed straight from Umbraco.Cms.Core 17.4.2's own `DynamicRoot.Origin.*DynamicRootOriginFinder`/`DynamicRoot.QuerySteps.*DynamicRootQueryStep` classes (`Root`, `Site`, `Current`, `Parent`, `ContentRoot`; `NearestAncestorOrSelf`, `NearestDescendantOrSelf`, `FurthestAncestorOrSelf`, `FurthestDescendantOrSelf`). A fixed start node id and a dynamic root are mutually exclusive in Umbraco's model, so `startNode.id` stays `null` whenever `DynamicRoot` is set. `PreFlightValidator` extends its `[AllowedChildren]`-style dangling-reference check to `AllowedContentTypes`/`DynamicRootQueryStep.DocumentTypes`. This is the Tier-1 instance-reference solution (Q2); Umbraco's `ByKey` origin (a fixed reference to one specific content instance) is deliberately excluded from the enum — impossible to express, not just rejected by validation — since it's the Tier-2 case handled by "Content seeding" below, which now exists as real content for C# to point at (wiring `ByKey` itself up to a seed's `Key` is still a separate, not-yet-done step).
+- **Content seeding — stub only** — `[SeedContent(DocumentType: typeof(...), Name: ..., Parent: typeof(...)?)]` on a plain marker class with no members. Sync creates a deterministic-GUID content node if absent — **zero property values, an empty stub** — and immediately publishes it so it's usable right away (e.g. as the stable target for a future `MultiNodeTreePicker` dynamic-root `ByKey` origin — the Tier-2 picker answer, Q2). New `SeedContentDefinition`, `DocumentTypeScanner.ScanSeedContent`, `Sync/ContentSeedingEngine`. Create-only, matching `DictionaryItemSyncEngine`/`LanguageSyncEngine`'s precedent: `IContentService.GetById(Guid)` checked first, an existing node is never updated or deleted. On creation: `IContentService.Create(name, parentId, documentTypeAlias)` → `content.Key` set explicitly to the declared GUID (same deterministic-GUID-before-first-save pattern as folder `EntityContainer`s) → `Save` → `Publish(content, ["*"])`. `Parent` (another `[SeedContent]` type) resolves recursively, parent-before-child, mirroring `LanguageSyncEngine`'s `Fallback` resolution. Runs after `ContentTypeSyncEngine` in the pipeline (the target content type must already exist). `PreFlightValidator` rejects duplicate seed GUIDs, a `DocumentType` missing `[DocumentType]`, a `Parent` that isn't itself `[SeedContent]`-attributed, and `Parent` cycles. **Deliberately stub-only**: populating a seed's actual property values from code is a distinct, still-open backlog item below — it needs a source-generated typed builder plus its own pre-flight validation, not an oversight here.
 
 **Package location:** `~/Code/Consid/Consid.Umbraco.CodeFirst`
 **Test project:** `~/Code/Consid/TestProjects/UmbracoTCodeFIrst` (Umbraco 17.4.2, net10.0)
@@ -59,42 +62,55 @@ The smallest slice that proves **write class → start site → query it** end-t
 
 ## Roadmap — deferred, in priority order
 
-1. **Unit tests for `DocumentTypeScanner`, `PreFlightValidator`, and the sync engines** — both scanner and
-   validator are pure logic with zero Umbraco dependency (plain reflection over records), so they're
-   testable today with in-memory fixture assemblies and no mocking. Goal: replace the "boot Basicv17,
-   click through the backoffice" verification loop with a fast local test run for scanner/validator
-   behavior. See `docs/research/testing-strategy.md` for sketches (duplicate alias/GUID, dangling
-   `[AllowedChildren]` refs, composition property exclusion, dictionary parent-chain resolution). Focused
-   validator/engine tests now exist for culture variance, template cycles, and language update-on-drift
-   (added alongside those features), but scanner coverage and broader sync-engine coverage
-   (`ContentTypeSyncEngine`, `MediaTypeSyncEngine`, `DataTypeSyncEngine`) are still open — see
-   `docs/research/ucodefirst-vs-v17-usync-status.md` gap #11.
+1. ~~**Unit tests for `DocumentTypeScanner`, `PreFlightValidator`, and the sync engines**~~ — **Done.**
+   `tests/uCodeFirst.Tests/Discovery/DocumentTypeScannerTests.cs` (13 cases) and
+   `tests/uCodeFirst.Tests/Validation/PreFlightValidatorTests.cs` (9 cases) now cover the pure-logic
+   scanner/validator paths sketched in `docs/research/testing-strategy.md` (duplicate alias/GUID,
+   dangling `[AllowedChildren]` refs, composition property exclusion, dictionary parent-chain
+   resolution), alongside the existing culture-variance/template-cycle/language-drift and sync-engine
+   (`ContentTypeSyncEngine`, `MediaTypeSyncEngine`, `DataTypeSyncEngine`) coverage. A real production
+   gap was found (not fixed) along the way: `PreFlightValidator` doesn't currently catch a property-alias
+   collision between a class and a composition it implements — see
+   `docs/research/ucodefirst-vs-v17-usync-status.md` gap #11 for the write-up. Broader SQLite/integration
+   coverage is still open, tracked under that same gap.
 
-2. **Configured pickers with dynamic root** — the Tier-1 instance-reference solution (Q2).
+2. **Dictionary item coverage dashboard** — backoffice screen showing which keys are code-grounded vs.
+   backoffice-only. Rescoped (2026-07-26): Umbraco's own built-in Translation dashboard already shows
+   missing/present values per culture, so that half of the original ask is already covered natively —
+   no need to duplicate it. What's still missing is specifically the *code-grounded vs. backoffice-only*
+   distinction. Deliberately low priority, not "no need" like member types above — folds into the
+   existing Settings-section dashboard (`plan-dashboard.element.js`, the backoffice dry-run dashboard
+   above) once real investment goes into that area, rather than being a separate near-term effort.
 
-3. **Member types & relation types.** (Media types ✓ done, Dictionary items ✓ done, Languages ✓ done — see
-   above.) No export evidence of anything custom to reproduce (built-in `Member` type + 2 Umbraco
-   Forms/Members-ecosystem relation types only), but member types are a different domain (member/auth
-   schema, not content schema) that would need its own design pass if a real need shows up. See
-   `docs/research/ucodefirst-vs-v17-usync-status.md` gap #10.
-
-4. **Dictionary item coverage dashboard** — backoffice screen showing which keys are code-grounded vs.
-   backoffice-only, and which have translations for which cultures. Split out of the dictionary items
-   work above; needs its own scoping (Umbraco dashboards are a Lit/web-component + package-manifest
-   registration, not part of the sync pipeline).
-
-5. **Content seeding** — deterministic-GUID singleton nodes (Tier-2 picker answer, Q2).
-
-6. **Segment variance** — culture variance shipped (`VariesByCulture` on `[DocumentType]`/`[ElementType]`
-   and per-property on `DataTypeBase`), segment/culture+segment variation is still open.
-
-7. **HistoryCleanup policy** — `PreventCleanup`/`KeepAllVersionsNewerThanDays`/`KeepLatestVersionPerDayForDays`
-    on content types. No export evidence of anyone customizing it (every content type in the reference
-    export is at Umbraco's default), so not urgent — revisit if a concrete need appears. See
-    `docs/research/ucodefirst-vs-v17-usync-status.md` gap #6.
-
-8. **Source generator** — removes `_publishedValueFallback` field and `Value<T>` getter boilerplate.
+3. **Source generator** — removes `_publishedValueFallback` field and `Value<T>` getter boilerplate.
     Nice to have, but the manual pattern is workable and a generator adds build-time complexity.
+
+4. **Real-value content seeding** — "Content seeding" above only creates an *empty* stub node (no
+   property values, by deliberate scope cut, not an oversight). This item is about populating a seed's
+   actual property values from code: needs a source-generated typed builder (so values are compile-time
+   type-checked against the target document type's declared properties) plus its own pre-flight
+   validation (mandatory/type checks) before any DB write — meaningfully more scope than the stub, hence
+   split out as its own backlog item rather than folded into "Content seeding."
+
+---
+
+## Explicitly out of scope
+
+- **Member types & relation types.** Considered and dropped (2026-07-25) — no export evidence of
+  anything custom to reproduce (built-in `Member` type + 2 Umbraco Forms/Members-ecosystem relation
+  types only), and no concrete driving need foreseen on a ~1 year+ horizon. Member types are a
+  different domain (member/auth schema, not content schema) that would need its own design pass from
+  scratch if a real need ever appears — not carried as backlog noise until then. See
+  `docs/research/ucodefirst-vs-v17-usync-status.md` gap #10.
+
+- **Segment variance.** Considered and dropped (2026-07-26) — vanilla Umbraco has no built-in UI to
+  create or manage segments at all (unlike languages, which get a real Settings screen); segment
+  variance only means anything paired with a personalization layer/add-on assigning visitors to
+  segments, which isn't in place and isn't planned. Culture variance (shipped: `VariesByCulture` on
+  `[DocumentType]`/`[ElementType]` and per-property on `DataTypeBase`) already covers the variation
+  axis that's actually in use. Revisit from scratch if a personalization layer is ever adopted —
+  segments aren't a static enum like languages, so this can't just mirror the culture-variance pattern
+  anyway.
 
 ---
 
@@ -133,12 +149,12 @@ models — no ModelsBuilder.
 
 ```csharp
 [DocumentType(
-    Guid: "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-    Name: "Start Page",
+    "Start Page",
     Icon: "icon-home",
     AllowedAtRoot: true,
     Folder: "Pages",
-    DefaultTemplate: "startPage")]
+    DefaultTemplate: "startPage",
+    Guid = "a1b2c3d4-e5f6-7890-abcd-ef1234567890")]
 [AllowedChildren(typeof(NewsArticle))]
 [PublishedModel("startPage")]
 public partial class StartPage : PublishedContentModel
@@ -149,11 +165,11 @@ public partial class StartPage : PublishedContentModel
         : base(content, fallback) => _publishedValueFallback = fallback;
 
     [Group(Groups.Content, SortOrder: 0)]
-    [TextString(Name: "Headline", Mandatory: true)]
+    [TextString(Name = "Headline", Mandatory = true)]
     public string? Headline => this.Value<string>(_publishedValueFallback, "headline");
 
     [Group(Groups.Content, SortOrder: 1)]
-    [RichText(Name: "Body")]
+    [RichText(Name = "Body")]
     public IHtmlEncodedString? Body => this.Value<IHtmlEncodedString>(_publishedValueFallback, "body");
 }
 ```

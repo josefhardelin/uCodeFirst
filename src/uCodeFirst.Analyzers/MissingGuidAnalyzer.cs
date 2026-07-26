@@ -27,7 +27,8 @@ public sealed class MissingGuidAnalyzer : DiagnosticAnalyzer
         "DocumentType", "DocumentTypeAttribute",
         "ElementType", "ElementTypeAttribute",
         "CompositionType", "CompositionTypeAttribute",
-        "DataType", "DataTypeAttribute");
+        "DataType", "DataTypeAttribute",
+        "SeedContent", "SeedContentAttribute");
 
     public override void Initialize(AnalysisContext context)
     {

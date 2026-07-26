@@ -29,7 +29,11 @@ public class ContentTypeSyncEngineTests
     private static PropertyDefinition Property(string alias, string group = "Content") =>
         new(Alias: alias, Name: alias, GroupName: group, SortOrder: 0, Mandatory: false, Description: null, DataType: new TextString(), VariesByCulture: false);
 
-    private static DocumentTypeDefinition Definition(IReadOnlyList<PropertyDefinition> properties) =>
+    private static DocumentTypeDefinition Definition(
+        IReadOnlyList<PropertyDefinition> properties,
+        bool preventCleanup = false,
+        int? keepAllVersionsNewerThanDays = null,
+        int? keepLatestVersionPerDayForDays = null) =>
         new(
             ClrType: typeof(ContentTypeSyncEngineTests),
             IsElement: false,
@@ -46,7 +50,10 @@ public class ContentTypeSyncEngineTests
             Properties: properties,
             CompositionKeys: Array.Empty<Guid>(),
             VariesByCulture: false,
-            IsContainer: false);
+            IsContainer: false,
+            PreventCleanup: preventCleanup,
+            KeepAllVersionsNewerThanDays: keepAllVersionsNewerThanDays,
+            KeepLatestVersionPerDayForDays: keepLatestVersionPerDayForDays);
 
     // Existing content type in the "database": group "content" has properties [headline, legacyField];
     // group "extra" has only [obsoleteProp]. Current C# definitions in these tests only declare "headline",
@@ -152,6 +159,66 @@ public class ContentTypeSyncEngineTests
         Assert.That(updated.PropertyTypes, Has.None.Matches<IPropertyType>(pt => pt.Alias == "obsoleteProp"));
         Assert.That(updated.PropertyGroups, Has.None.Matches<PropertyGroup>(g => g.Alias == "extra"));
         Assert.That(updated.PropertyGroups, Has.Some.Matches<PropertyGroup>(g => g.Alias == "content"));
+    }
+
+    // --- HistoryCleanup -------------------------------------------------------------------------
+
+    [Test]
+    public async Task SyncAsync_CreatesNewContentType_SetsHistoryCleanup()
+    {
+        var service = new FakeContentTypeService();
+        var engine = new ContentTypeSyncEngine(service, new FakeTemplateService(), Helper, NullLogger<ContentTypeSyncEngine>.Instance);
+
+        var definition = Definition(new[] { Property("headline") }, preventCleanup: true, keepAllVersionsNewerThanDays: 30, keepLatestVersionPerDayForDays: 90);
+        await engine.SyncAsync(new[] { definition }, DataTypeByKey(), CodeFirstStrategy.NonDestructive);
+
+        var created = await service.GetAsync(TypeKey);
+        Assert.That(created!.HistoryCleanup, Is.Not.Null);
+        Assert.Multiple(() =>
+        {
+            Assert.That(created.HistoryCleanup!.PreventCleanup, Is.True);
+            Assert.That(created.HistoryCleanup!.KeepAllVersionsNewerThanDays, Is.EqualTo(30));
+            Assert.That(created.HistoryCleanup!.KeepLatestVersionPerDayForDays, Is.EqualTo(90));
+        });
+    }
+
+    [Test]
+    public async Task SyncAsync_CreatesNewContentType_WithoutHistoryCleanupParams_LeavesUmbracoDefaults()
+    {
+        var service = new FakeContentTypeService();
+        var engine = new ContentTypeSyncEngine(service, new FakeTemplateService(), Helper, NullLogger<ContentTypeSyncEngine>.Instance);
+
+        await engine.SyncAsync(new[] { Definition(new[] { Property("headline") }) }, DataTypeByKey(), CodeFirstStrategy.NonDestructive);
+
+        var created = await service.GetAsync(TypeKey);
+        Assert.That(created!.HistoryCleanup, Is.Not.Null);
+        Assert.Multiple(() =>
+        {
+            Assert.That(created.HistoryCleanup!.PreventCleanup, Is.False);
+            Assert.That(created.HistoryCleanup!.KeepAllVersionsNewerThanDays, Is.Null);
+            Assert.That(created.HistoryCleanup!.KeepLatestVersionPerDayForDays, Is.Null);
+        });
+    }
+
+    [Test]
+    public async Task SyncAsync_UpdatesExistingContentType_ChangesHistoryCleanupWhenValuesDiffer()
+    {
+        var existing = BuildExistingContentType();
+        Assert.That(existing.HistoryCleanup, Is.Not.Null); // Umbraco default: PreventCleanup false, both day-counts null.
+
+        var service = new FakeContentTypeService(existing);
+        var engine = new ContentTypeSyncEngine(service, new FakeTemplateService(), Helper, NullLogger<ContentTypeSyncEngine>.Instance);
+
+        var definition = Definition(new[] { Property("headline") }, preventCleanup: true, keepAllVersionsNewerThanDays: 14, keepLatestVersionPerDayForDays: 60);
+        await engine.SyncAsync(new[] { definition }, DataTypeByKey(), CodeFirstStrategy.NonDestructive);
+
+        var updated = await service.GetAsync(TypeKey);
+        Assert.Multiple(() =>
+        {
+            Assert.That(updated!.HistoryCleanup!.PreventCleanup, Is.True);
+            Assert.That(updated.HistoryCleanup!.KeepAllVersionsNewerThanDays, Is.EqualTo(14));
+            Assert.That(updated.HistoryCleanup!.KeepLatestVersionPerDayForDays, Is.EqualTo(60));
+        });
     }
 
     // Minimal editor fake, only used to satisfy the DataType constructor — Alias is read via

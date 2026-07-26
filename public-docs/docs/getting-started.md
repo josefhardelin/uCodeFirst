@@ -40,11 +40,11 @@ using Umbraco.Cms.Web.Common.PublishedModels;
 using Umbraco.Extensions;
 
 [DocumentType(
-    Guid: "8f3c1a2b-3e4d-4f5a-b6c7-d8e9f0a1b2c3",
-    Name: "News Article",
+    "News Article",
     Alias: "newsArticle",          // optional — defaults to camelCase class name
     Icon: "icon-newspaper",
-    AllowedAtRoot: true)]
+    AllowedAtRoot: true,
+    Guid = "8f3c1a2b-3e4d-4f5a-b6c7-d8e9f0a1b2c3")]
 [PublishedModel("newsArticle")]
 public partial class NewsArticle : PublishedContentModel
 {
@@ -54,16 +54,16 @@ public partial class NewsArticle : PublishedContentModel
         : base(content, fallback) => _publishedValueFallback = fallback;
 
     [Group(Groups.Content, SortOrder: 0)]
-    [TextString(Name: "Headline", Mandatory: true)]
+    [TextString(Name = "Headline", Mandatory = true)]
     public string? Headline => this.Value<string>(_publishedValueFallback, "headline");
 
     [Group(Groups.Content, SortOrder: 1)]
-    [RichText(Name: "Body")]
+    [RichText(Name = "Body")]
     public IHtmlEncodedString? Body => this.Value<IHtmlEncodedString>(_publishedValueFallback, "body");
 }
 ```
 
-Every document type needs a **stable, explicit GUID** — generate one with `uuidgen` (macOS/Linux) or `New-Guid` (PowerShell) and never change it; it's the stable identity across environments and renames.
+Every document type needs a **stable, explicit GUID**, set via `Guid = "..."` (a settable property, not a constructor argument). Leave it unset and the `UCF001` Roslyn analyzer will flag it as a build error with a code fixer that generates one, or generate one yourself with `uuidgen` (macOS/Linux) or `New-Guid` (PowerShell). Never change it once set — it's the stable identity across environments and renames.
 
 ## Property editors
 
@@ -80,7 +80,7 @@ All property-editor attributes live under the `uCodeFirst.DataTypes` namespace a
 ## Allowed children and root
 
 ```csharp
-[DocumentType(Guid: "...", Name: "Site Root", AllowedAtRoot: true)]
+[DocumentType("Site Root", AllowedAtRoot: true, Guid = "...")]
 [AllowedChildren(typeof(NewsArticle), typeof(LandingPage))]
 public partial class SiteRoot : PublishedContentModel { ... }
 ```

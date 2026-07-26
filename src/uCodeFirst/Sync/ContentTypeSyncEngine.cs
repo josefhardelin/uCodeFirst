@@ -5,6 +5,7 @@ using uCodeFirst.Configuration;
 using uCodeFirst.Discovery;
 using Microsoft.Extensions.Logging;
 using Umbraco.Cms.Core.Models;
+using Umbraco.Cms.Core.Models.ContentEditing;
 using Umbraco.Cms.Core.Services;
 using Umbraco.Cms.Core;
 using Umbraco.Cms.Core.Strings;
@@ -259,7 +260,13 @@ internal sealed class ContentTypeSyncEngine
             AllowedAsRoot = def.AllowedAtRoot,
             IsElement = def.IsElement,
             Variations = def.VariesByCulture ? ContentVariation.Culture : ContentVariation.Nothing,
-            ListView = def.IsContainer ? Constants.DataTypes.Guids.ListViewContentGuid : null
+            ListView = def.IsContainer ? Constants.DataTypes.Guids.ListViewContentGuid : null,
+            HistoryCleanup = new HistoryCleanup
+            {
+                PreventCleanup = def.PreventCleanup,
+                KeepAllVersionsNewerThanDays = def.KeepAllVersionsNewerThanDays,
+                KeepLatestVersionPerDayForDays = def.KeepLatestVersionPerDayForDays
+            }
         };
 
         ApplyProperties(contentType, def, dataTypeByKey);
@@ -287,6 +294,14 @@ internal sealed class ContentTypeSyncEngine
         existing.IsElement = def.IsElement;
         existing.Variations = def.VariesByCulture ? ContentVariation.Culture : ContentVariation.Nothing;
         existing.ListView = def.IsContainer ? Constants.DataTypes.Guids.ListViewContentGuid : null;
+
+        // Mutate the existing HistoryCleanup instance in place (falling back to a new one if somehow
+        // null) rather than replacing it wholesale, matching the rest of this method's in-place updates.
+        var historyCleanup = existing.HistoryCleanup ?? new HistoryCleanup();
+        historyCleanup.PreventCleanup = def.PreventCleanup;
+        historyCleanup.KeepAllVersionsNewerThanDays = def.KeepAllVersionsNewerThanDays;
+        historyCleanup.KeepLatestVersionPerDayForDays = def.KeepLatestVersionPerDayForDays;
+        existing.HistoryCleanup = historyCleanup;
 
         // Move to correct folder if it has changed
         var targetParentId = def.Folder is not null && folderIdByPath.TryGetValue(def.Folder, out var fId) ? fId : -1;

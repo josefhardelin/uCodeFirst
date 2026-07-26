@@ -12,7 +12,8 @@ internal sealed class PreFlightValidator
         IReadOnlyList<MediaTypeDefinition>? mediaDefinitions = null,
         IReadOnlyList<DictionaryItemDefinition>? dictionaryDefinitions = null,
         IReadOnlyList<LanguageSetDefinition>? languageSetDefinitions = null,
-        IReadOnlyList<TemplateDefinition>? templateDefinitions = null)
+        IReadOnlyList<TemplateDefinition>? templateDefinitions = null,
+        IReadOnlyList<SeedContentDefinition>? seedContentDefinitions = null)
     {
         var errors = new List<string>();
         var aliasByType = new Dictionary<string, Type>(StringComparer.OrdinalIgnoreCase);
@@ -95,6 +96,40 @@ internal sealed class PreFlightValidator
             }
         }
 
+        // Validate document-type references in [ContentPicker]/[MultiNodeTreePicker]-backed properties:
+        // AllowedContentTypes filters on both, plus DynamicRoot query steps on MultiNodeTreePicker.
+        foreach (var def in definitions)
+        {
+            foreach (var prop in def.Properties)
+            {
+                var referencedTypes = new List<Type>();
+
+                switch (prop.DataType)
+                {
+                    case ContentPickerDataType cp:
+                        referencedTypes.AddRange(cp.AllowedContentTypes);
+                        break;
+                    case MultiNodeTreePickerDataType mntp:
+                        referencedTypes.AddRange(mntp.AllowedContentTypes);
+                        if (mntp.DynamicRoot is not null)
+                        {
+                            foreach (var step in mntp.DynamicRoot.QuerySteps)
+                                referencedTypes.AddRange(step.DocumentTypes);
+                        }
+                        break;
+                }
+
+                foreach (var referencedType in referencedTypes)
+                {
+                    var docTypeAttr = referencedType.GetCustomAttribute<DocumentTypeAttribute>();
+                    if (docTypeAttr is null)
+                        errors.Add($"[{prop.DataType.GetType().Name}] on '{def.ClrType.FullName}.{prop.Alias}' references '{referencedType.FullName}' which has no [DocumentType] attribute.");
+                    else if (!scannedKeys.Contains(docTypeAttr.Key))
+                        errors.Add($"[{prop.DataType.GetType().Name}] on '{def.ClrType.FullName}.{prop.Alias}' references '{referencedType.FullName}' which was not discovered in the scanned assembly set.");
+                }
+            }
+        }
+
         // Validate composition keys
         foreach (var def in definitions)
         {
@@ -124,6 +159,9 @@ internal sealed class PreFlightValidator
 
         if (templateDefinitions is { Count: > 0 })
             ValidateTemplates(templateDefinitions, errors);
+
+        if (seedContentDefinitions is { Count: > 0 })
+            ValidateSeedContent(seedContentDefinitions, scannedKeys, errors);
 
         return errors;
     }
@@ -251,6 +289,49 @@ internal sealed class PreFlightValidator
             }
 
             Claim(def.ItemKey, $"field '{def.Field.DeclaringType?.FullName}.{def.Field.Name}'");
+        }
+    }
+
+    // DocumentType/Parent cross-references are raw CLR Types (see SeedContentDefinition), so — like
+    // [AllowedChildren] — they're validated here via reflection rather than by the compiler. Parent
+    // chain cycle detection mirrors [Template]'s Master-chain check above.
+    private static void ValidateSeedContent(IReadOnlyList<SeedContentDefinition> definitions, HashSet<Guid> scannedDocumentTypeKeys, List<string> errors)
+    {
+        var keyByType = new Dictionary<Guid, Type>();
+        var defByType = definitions.ToDictionary(d => d.ClrType);
+
+        foreach (var def in definitions)
+        {
+            if (keyByType.TryGetValue(def.Key, out var conflicting))
+                errors.Add($"Duplicate seed content GUID '{def.Key}': '{def.ClrType.FullName}' and '{conflicting.FullName}'.");
+            else
+                keyByType[def.Key] = def.ClrType;
+
+            var docTypeAttr = def.DocumentType.GetCustomAttribute<DocumentTypeAttribute>();
+            if (docTypeAttr is null)
+                errors.Add($"[SeedContent] on '{def.ClrType.FullName}' references '{def.DocumentType.FullName}' which has no [DocumentType] attribute.");
+            else if (!scannedDocumentTypeKeys.Contains(docTypeAttr.Key))
+                errors.Add($"[SeedContent] on '{def.ClrType.FullName}' references '{def.DocumentType.FullName}' which was not discovered in the scanned assembly set.");
+
+            if (def.Parent is not null && !defByType.ContainsKey(def.Parent))
+                errors.Add($"[SeedContent] on '{def.ClrType.FullName}' has Parent '{def.Parent.FullName}' which has no [SeedContent] attribute.");
+        }
+
+        foreach (var def in definitions)
+        {
+            var visited = new HashSet<Type> { def.ClrType };
+            var current = def.Parent;
+
+            while (current is not null && defByType.TryGetValue(current, out var currentDef))
+            {
+                if (!visited.Add(current))
+                {
+                    errors.Add($"[SeedContent] Parent chain starting at '{def.ClrType.FullName}' contains a cycle.");
+                    break;
+                }
+
+                current = currentDef.Parent;
+            }
         }
     }
 

@@ -49,10 +49,16 @@ public class CodeFirstStartupHandlerTests
         var dictionaryItemSyncEngine = new DictionaryItemSyncEngine(new FakeDictionaryItemService(), NullLogger<DictionaryItemSyncEngine>.Instance);
         var languageSyncEngine = new LanguageSyncEngine(new FakeLanguageService(), NullLogger<LanguageSyncEngine>.Instance);
         var templateSyncEngine = new TemplateSyncEngine(new FakeTemplateService(), NullLogger<TemplateSyncEngine>.Instance);
+        // Every test in this file hits a permanent validation failure (DuplicateAliasDocA/DocB share an
+        // alias) before SyncAsync ever reaches an engine call, and PlanAsync never calls this engine at
+        // all (content seeds aren't part of the dry-run preview) — so this engine's IContentService is
+        // never actually invoked here, regardless of whether some other fixture in the AppDomain-wide
+        // scan happens to carry [SeedContent].
+        var contentSeedingEngine = new ContentSeedingEngine(null!, NullLogger<ContentSeedingEngine>.Instance);
 
         var syncService = new CodeFirstSyncService(
             scanner, validator, dataTypeSyncEngine, contentTypeSyncEngine, mediaTypeSyncEngine,
-            dictionaryItemSyncEngine, languageSyncEngine, templateSyncEngine, NullLogger<CodeFirstSyncService>.Instance);
+            dictionaryItemSyncEngine, languageSyncEngine, templateSyncEngine, contentSeedingEngine, NullLogger<CodeFirstSyncService>.Instance);
 
         return new CodeFirstStartupHandler(syncService, runtimeState, Options.Create(options), NullLogger<CodeFirstStartupHandler>.Instance);
     }

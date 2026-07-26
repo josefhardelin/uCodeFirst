@@ -3,7 +3,7 @@
 Code-first schema authoring for Umbraco 17+. Define document types as C# classes; the package syncs them into the Umbraco database on startup — no backoffice clicking, no generate step.
 
 ```csharp
-[DocumentType(Guid: "8f3c1a2b-3e4d-4f5a-b6c7-d8e9f0a1b2c3", Name: "News Article", AllowedAtRoot: true)]
+[DocumentType("News Article", AllowedAtRoot: true, Guid = "8f3c1a2b-3e4d-4f5a-b6c7-d8e9f0a1b2c3")]
 public partial class NewsArticle : PublishedContentModel
 {
     private readonly IPublishedValueFallback _publishedValueFallback;
@@ -12,11 +12,11 @@ public partial class NewsArticle : PublishedContentModel
         : base(content, fallback) => _publishedValueFallback = fallback;
 
     [Group(Groups.Content, SortOrder: 0)]
-    [TextString(Name: "Headline", Mandatory: true)]
+    [TextString(Name = "Headline", Mandatory = true)]
     public string? Headline => this.Value<string>(_publishedValueFallback, "headline");
 
     [Group(Groups.Content, SortOrder: 1)]
-    [RichText(Name: "Body")]
+    [RichText(Name = "Body")]
     public IHtmlEncodedString? Body => this.Value<IHtmlEncodedString>(_publishedValueFallback, "body");
 }
 ```
@@ -89,11 +89,11 @@ using Umbraco.Cms.Web.Common.PublishedModels;
 using Umbraco.Extensions;
 
 [DocumentType(
-    Guid: "8f3c1a2b-3e4d-4f5a-b6c7-d8e9f0a1b2c3",
-    Name: "News Article",
+    "News Article",
     Alias: "newsArticle",          // optional — defaults to camelCase class name
     Icon: "icon-newspaper",
-    AllowedAtRoot: true)]
+    AllowedAtRoot: true,
+    Guid = "8f3c1a2b-3e4d-4f5a-b6c7-d8e9f0a1b2c3")]
 [PublishedModel("newsArticle")]
 public partial class NewsArticle : PublishedContentModel
 {
@@ -103,18 +103,18 @@ public partial class NewsArticle : PublishedContentModel
         : base(content, fallback) => _publishedValueFallback = fallback;
 
     [Group(Groups.Content, SortOrder: 0)]
-    [TextString(Name: "Headline", Mandatory: true)]
+    [TextString(Name = "Headline", Mandatory = true)]
     public string? Headline => this.Value<string>(_publishedValueFallback, "headline");
 
     [Group(Groups.Content, SortOrder: 1)]
-    [RichText(Name: "Body")]
+    [RichText(Name = "Body")]
     public IHtmlEncodedString? Body => this.Value<IHtmlEncodedString>(_publishedValueFallback, "body");
 }
 ```
 
 ### GUIDs
 
-Every document type needs a **stable, explicit GUID**. Generate one with `uuidgen` (macOS/Linux), `New-Guid` (PowerShell), or any online tool. Never change it — it's the stable identity across environments and renames.
+Every document type needs a **stable, explicit GUID**, set via `Guid = "..."` (a settable property, not a constructor argument). Easiest: leave it unset — the `UCF001` Roslyn analyzer flags the missing GUID as a build error with a code fixer that generates one for you. Or generate one yourself with `uuidgen` (macOS/Linux), `New-Guid` (PowerShell), or any online tool. Never change it once set — it's the stable identity across environments and renames.
 
 ### Property editors
 
@@ -145,7 +145,7 @@ Available constants: `Groups.Content`, `Groups.Settings`, `Groups.SEO`, `Groups.
 ### Allowed children and root
 
 ```csharp
-[DocumentType(Guid: "...", Name: "Site Root", AllowedAtRoot: true)]
+[DocumentType("Site Root", AllowedAtRoot: true, Guid = "...")]
 [AllowedChildren(typeof(NewsArticle), typeof(LandingPage))]
 public partial class SiteRoot : PublishedContentModel { ... }
 ```
@@ -194,6 +194,21 @@ umbracoBuilder.Build();
 ```
 
 This keeps production schema changes deliberate and uSync-controlled.
+
+---
+
+## AI coding agent skill
+
+`samples/Basicv17/.claude/skills/ucodefirst/` ships a [Claude Code skill](https://code.claude.com/docs/en/skills)
+that bridges familiar Umbraco backoffice concepts to uCodeFirst's C# attribute API and walks an agent
+through scaffolding a new document/element type end-to-end (class, properties, template, view) — assuming
+Umbraco fluency already, teaching only the code-first delta. `samples/Basicv17/AGENTS.md` points other
+agents (Cursor, Copilot, etc.) at the same file.
+
+Copy `.claude/skills/ucodefirst/` (and `AGENTS.md`, if useful) into your own project to get the same
+guidance there. There's no automatic delivery via the NuGet package — see
+`docs/research/nuget-agent-skills-delivery.md` for why (no package manager, for any AI coding tool,
+auto-populates agent config today; every real mechanism needs an explicit action in the consuming repo).
 
 ---
 

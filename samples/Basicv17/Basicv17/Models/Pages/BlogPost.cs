@@ -17,6 +17,10 @@ namespace Basicv17.Models.Pages;
     Color: ContentTypeColor.Green,
     Folder: "Pages",
     VariesByCulture: true,
+    // High-churn content type — keep every version for the first 30 days (easy rollback of recent
+    // edits), then thin history down to one version per day for the following 90 days.
+    KeepAllVersionsNewerThanDays: 30,
+    KeepLatestVersionPerDayForDays: 90,
     Guid = "b6c1f0a2-4d3e-4a5b-9c6d-7e8f9a0b1c2d")]
 [PublishedModel("blogPost")]
 public partial class BlogPost : PublishedContentModel
@@ -34,9 +38,10 @@ public partial class BlogPost : PublishedContentModel
     [RichText(Name = "Body", VariesByCulture = true)]
     public IHtmlEncodedString? Body => this.Value<IHtmlEncodedString>(_publishedValueFallback, "body");
 
-    // Picks the news article this post relates to.
+    // Picks the news article this post relates to. Restricted to News Article nodes only via
+    // RelatedArticlePicker's AllowedContentTypes (see Models/DataTypes/RelatedArticlePicker.cs).
     [Group(Groups.Content, SortOrder: 2)]
-    [ContentPicker(Name = "Related Article")]
+    [RelatedArticlePicker(Name = "Related Article")]
     public IPublishedContent? RelatedArticle => this.Value<IPublishedContent>(_publishedValueFallback, "relatedArticle");
 
     // Free-form keywords for filtering/search.

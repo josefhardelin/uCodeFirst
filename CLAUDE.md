@@ -6,6 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 `samples/Basicv17/` is a working Umbraco site that demonstrates the library API. **Always update it when a public API changes** — attribute signatures, namespace moves, new required patterns, etc. The sample should compile and reflect the current API at all times. It references the library via a local `ProjectReference`.
 
+`samples/Basicv17/.claude/skills/ucodefirst/SKILL.md` is a consumer-facing agent skill (Claude Code discovers it automatically when the sample is opened as/under the working directory; `samples/Basicv17/AGENTS.md` points other agents at the same file). It documents attribute syntax by example — **when a public API changes, check this file too**, not just the sample's `.cs` files. See `README.md`'s "AI coding agent skill" section and `docs/research/nuget-agent-skills-delivery.md` for why it lives here instead of shipping in the NuGet package.
+
 ## Commands
 
 ```bash

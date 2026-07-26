@@ -18,7 +18,10 @@ internal sealed record DocumentTypeDefinition(
     IReadOnlyList<PropertyDefinition> Properties,
     IReadOnlyList<Guid> CompositionKeys,
     bool VariesByCulture,
-    bool IsContainer);
+    bool IsContainer,
+    bool PreventCleanup = false,
+    int? KeepAllVersionsNewerThanDays = null,
+    int? KeepLatestVersionPerDayForDays = null);
 
 internal sealed record PropertyDefinition(
     string Alias,

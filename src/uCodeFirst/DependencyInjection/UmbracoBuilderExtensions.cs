@@ -25,6 +25,7 @@ public static class UmbracoBuilderExtensions
             .AddSingleton<DictionaryItemSyncEngine>()
             .AddSingleton<LanguageSyncEngine>()
             .AddSingleton<TemplateSyncEngine>()
+            .AddSingleton<ContentSeedingEngine>()
             .AddSingleton<CodeFirstSyncService>();
 
         builder.AddNotificationAsyncHandler<UmbracoApplicationStartedNotification, CodeFirstStartupHandler>();

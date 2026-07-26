@@ -16,6 +16,7 @@ internal sealed class CodeFirstSyncService
     private readonly DictionaryItemSyncEngine _dictionaryItemSyncEngine;
     private readonly LanguageSyncEngine _languageSyncEngine;
     private readonly TemplateSyncEngine _templateSyncEngine;
+    private readonly ContentSeedingEngine _contentSeedingEngine;
     private readonly ILogger<CodeFirstSyncService> _logger;
 
     public CodeFirstSyncService(
@@ -27,6 +28,7 @@ internal sealed class CodeFirstSyncService
         DictionaryItemSyncEngine dictionaryItemSyncEngine,
         LanguageSyncEngine languageSyncEngine,
         TemplateSyncEngine templateSyncEngine,
+        ContentSeedingEngine contentSeedingEngine,
         ILogger<CodeFirstSyncService> logger)
     {
         _scanner = scanner;
@@ -37,6 +39,7 @@ internal sealed class CodeFirstSyncService
         _dictionaryItemSyncEngine = dictionaryItemSyncEngine;
         _languageSyncEngine = languageSyncEngine;
         _templateSyncEngine = templateSyncEngine;
+        _contentSeedingEngine = contentSeedingEngine;
         _logger = logger;
     }
 
@@ -55,6 +58,11 @@ internal sealed class CodeFirstSyncService
             await _contentTypeSyncEngine.SyncAsync(scan.Definitions, dataTypeByKey, strategy, ct);
         }
 
+        // Must run after ContentTypeSyncEngine — a seed's [SeedContent(DocumentType: ...)] needs the
+        // matching content type to already exist before an instance of it can be created.
+        if (scan.SeedContentDefinitions.Count > 0)
+            await _contentSeedingEngine.SyncAsync(scan.SeedContentDefinitions, ct);
+
         if (scan.MediaDefinitions.Count > 0)
         {
             var mediaDataTypeByKey = await _dataTypeSyncEngine.EnsureMediaDataTypesAsync(scan.MediaDefinitions, ct);
@@ -71,8 +79,8 @@ internal sealed class CodeFirstSyncService
     }
 
     // uCodeFirst:Enabled=false — computes the same plan as SyncAsync but never writes. Scoped to content
-    // types and media types only (see TypeSyncPlan); data types, dictionary items, languages, and
-    // templates aren't previewed yet since those engines have no plan/apply split.
+    // types and media types only (see TypeSyncPlan); data types, dictionary items, languages, templates,
+    // and content seeds aren't previewed yet since those engines have no plan/apply split.
     public async Task PlanAsync(IEnumerable<Assembly> assemblies, CodeFirstStrategy strategy, CancellationToken ct = default)
     {
         var scan = ScanAndValidate(assemblies.ToList());
@@ -132,7 +140,7 @@ internal sealed class CodeFirstSyncService
 
         _logger.LogInformation(
             "uCodeFirst dry run (Enabled=false) — Would create: {CreateCount} [{Creates}]. Would update: {UpdateCount} [{Updates}]. {PruneSummary} " +
-            "Dry-run preview does not yet cover data types, dictionary items, languages, or templates — only content types and media types.",
+            "Dry-run preview does not yet cover data types, dictionary items, languages, templates, or content seeds — only content types and media types.",
             result.ToCreate.Count, string.Join(", ", result.ToCreate),
             result.ToUpdate.Count, string.Join(", ", result.ToUpdate),
             pruneSummary);
@@ -145,18 +153,19 @@ internal sealed class CodeFirstSyncService
         var dictionaryDefinitions = _scanner.ScanDictionaryItems(assemblyList);
         var languageSetDefinitions = _scanner.ScanLanguages(assemblyList);
         var templateDefinitions = _scanner.ScanTemplates(assemblyList);
+        var seedContentDefinitions = _scanner.ScanSeedContent(assemblyList);
 
-        if (definitions.Count == 0 && mediaDefinitions.Count == 0 && dictionaryDefinitions.Count == 0 && languageSetDefinitions.Count == 0 && templateDefinitions.Count == 0)
+        if (definitions.Count == 0 && mediaDefinitions.Count == 0 && dictionaryDefinitions.Count == 0 && languageSetDefinitions.Count == 0 && templateDefinitions.Count == 0 && seedContentDefinitions.Count == 0)
         {
-            _logger.LogDebug("Code-first: no [DocumentType], [MediaType], [DictionaryItem], [Languages], or [Template] members found.");
-            return new ScanResult(definitions, mediaDefinitions, dictionaryDefinitions, languageSetDefinitions, templateDefinitions, IsEmpty: true);
+            _logger.LogDebug("Code-first: no [DocumentType], [MediaType], [DictionaryItem], [Languages], [Template], or [SeedContent] members found.");
+            return new ScanResult(definitions, mediaDefinitions, dictionaryDefinitions, languageSetDefinitions, templateDefinitions, seedContentDefinitions, IsEmpty: true);
         }
 
         _logger.LogInformation(
-            "Code-first: discovered {DocCount} document type(s), {MediaCount} media type(s), {DictCount} dictionary item(s), {LangCount} language(s), {TemplateCount} template(s).",
-            definitions.Count, mediaDefinitions.Count, dictionaryDefinitions.Count, languageSetDefinitions.Sum(l => l.Languages.Count), templateDefinitions.Count);
+            "Code-first: discovered {DocCount} document type(s), {MediaCount} media type(s), {DictCount} dictionary item(s), {LangCount} language(s), {TemplateCount} template(s), {SeedCount} content seed(s).",
+            definitions.Count, mediaDefinitions.Count, dictionaryDefinitions.Count, languageSetDefinitions.Sum(l => l.Languages.Count), templateDefinitions.Count, seedContentDefinitions.Count);
 
-        var errors = _validator.Validate(definitions, mediaDefinitions, dictionaryDefinitions, languageSetDefinitions, templateDefinitions);
+        var errors = _validator.Validate(definitions, mediaDefinitions, dictionaryDefinitions, languageSetDefinitions, templateDefinitions, seedContentDefinitions);
         if (errors.Count > 0)
         {
             var bullet = string.Join("\n  - ", errors);
@@ -164,7 +173,7 @@ internal sealed class CodeFirstSyncService
                 $"Code-first pre-flight validation failed with {errors.Count} error(s):\n  - {bullet}");
         }
 
-        return new ScanResult(definitions, mediaDefinitions, dictionaryDefinitions, languageSetDefinitions, templateDefinitions, IsEmpty: false);
+        return new ScanResult(definitions, mediaDefinitions, dictionaryDefinitions, languageSetDefinitions, templateDefinitions, seedContentDefinitions, IsEmpty: false);
     }
 
     private sealed record ScanResult(
@@ -173,5 +182,6 @@ internal sealed class CodeFirstSyncService
         IReadOnlyList<DictionaryItemDefinition> DictionaryDefinitions,
         IReadOnlyList<LanguageSetDefinition> LanguageSetDefinitions,
         IReadOnlyList<TemplateDefinition> TemplateDefinitions,
+        IReadOnlyList<SeedContentDefinition> SeedContentDefinitions,
         bool IsEmpty);
 }

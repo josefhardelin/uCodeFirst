@@ -42,6 +42,28 @@ compile time. Three tiers:
 3. **Escape hatch.** Mark that one config field "backoffice-owned" so the editor sets it once and code
    never overwrites it.
 
+**Tier 1 — implemented** (roadmap "Configured pickers with dynamic root," `DataTypes/DynamicRootConfig.cs`,
+`MultiNodeTreePickerDataType`/`ContentPickerDataType`). `DynamicRootOrigin` is a closed C# enum with only
+the five structural origins (`Root`, `Site`, `Current`, `Parent`, `ContentRoot`) — Umbraco's `ByKey` origin
+(`OriginKey: Guid`, a fixed reference to one specific content *instance*) is deliberately not exposed at
+all, so it's impossible to express in code rather than merely rejected by validation. `AllowedContentTypeIds`
+is named `AllowedContentTypeIds` in Umbraco's own config POCO but is actually a comma-separated **alias**
+string on the wire (`MultiNodePickerConfiguration.Filter`); uCodeFirst's `AllowedContentTypes` accepts
+`typeof(...)` and resolves to that alias-string format via `[DocumentType]` reflection, matching how
+`ContentPickerDataType.Filter` already worked before this change.
+
+**Tier 2 — content seeding shipped (stub only); `ByKey` wiring still open.** "Content seeding" (roadmap,
+Done ✓) ships `[SeedContent(DocumentType: typeof(...), Name: ..., Parent: typeof(...)?)]`: a deterministic-
+GUID **empty stub** node (`ContentSeedingEngine`, create-only) now exists for `ByKey` to point at — the
+"doesn't exist yet" gap this tier described is closed. What's still open is exposing `ByKey` itself on
+`DynamicRootOrigin` and wiring `OriginKey` to a seed's declared `Key`; that was deliberately left out of
+both "Configured pickers with dynamic root" and "Content seeding" and remains a distinct, not-yet-scoped
+follow-up. Separately, populating a seed's actual *property values* from code (as opposed to the empty
+stub) is its own backlog item ("Real-value content seeding") — a bigger lift needing a source-generated
+typed builder plus its own pre-flight validation, deliberately not attempted alongside the stub.
+
+**Tier 3 — not started.** No escape-hatch/backoffice-owned-field mechanism exists yet for any config type.
+
 ---
 
 ## Q3 — Identity: how does a code type get a stable GUID and match the DB across renames?
