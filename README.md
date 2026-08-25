@@ -23,11 +23,26 @@ public partial class NewsArticle : PublishedContentModel
 
 ---
 
-## Using locally (project reference)
+## Installation
 
-While the package is under development and not yet on NuGet, reference it directly from your Umbraco project.
+Requires Umbraco 17.4.2+ and .NET 10.
 
-### 1. Add a project reference
+### 1. Add the package
+
+```bash
+dotnet add package Our.Umbraco.CodeFirst --prerelease
+```
+
+`--prerelease` is required while the package is in beta.
+
+> **The NuGet id is `Our.Umbraco.CodeFirst`, but the namespace is `uCodeFirst`.**
+> The shorter id was already taken on nuget.org by an unrelated package, so the
+> published id follows the `Our.Umbraco.*` convention the Umbraco community uses
+> for third-party packages. Nothing changes in your code — you still write
+> `using uCodeFirst;`.
+
+<details>
+<summary>Or reference the project directly (contributing, or tracking <code>main</code>)</summary>
 
 In your Umbraco site's `.csproj`:
 
@@ -37,12 +52,15 @@ In your Umbraco site's `.csproj`:
 </ItemGroup>
 ```
 
-Use a relative path or an absolute path depending on your repo layout. For example, if both repos sit side-by-side:
+Use a relative or absolute path depending on your repo layout. For example, if both repos sit side-by-side:
 
 ```xml
 <ProjectReference Include="../../uCodeFirst/src/uCodeFirst/uCodeFirst.csproj" />
 ```
-```
+
+This is what `samples/Basicv17` does.
+
+</details>
 
 ### 2. Disable ModelsBuilder
 
@@ -74,6 +92,15 @@ builder.CreateUmbracoBuilder()
     .AddCodeFirst()   // ← add this
     .Build();
 ```
+
+### Versioning
+
+The **major version tracks the Umbraco major** it targets — `17.x` → Umbraco 17 — following the
+convention uSync and other Umbraco libraries use. Minor and patch are this package's own; `17.3.0`
+would mean "3rd feature release for the Umbraco 17 line", not "built for Umbraco 17.3".
+
+So pick the major matching your Umbraco version. The exact minimum (currently Umbraco 17.4.2) is
+declared as a normal NuGet dependency range and resolved for you on install.
 
 ---
 

@@ -2,7 +2,13 @@
 
   <PropertyGroup>
     <StaticWebAssetBasePath>/</StaticWebAssetBasePath>
-    <Version>0.1.0-alpha.1</Version>
+    <!-- Published id differs from the assembly name: 'uCodeFirst' is taken on
+         nuget.org by an unrelated package. Namespace stays uCodeFirst. -->
+    <PackageId>Our.Umbraco.CodeFirst</PackageId>
+    <!-- Major tracks the Umbraco major this targets (uSync convention); minor
+         and patch are ours. The [17.4.2, 18.0.0) pin below is the separate
+         minimum-Umbraco statement. -->
+    <Version>17.0.0-beta.1</Version>
     <Authors>Josef Härdelin</Authors>
     <Description>Code-first schema authoring for Umbraco CMS 17+. Define document types as C#
       classes; the package syncs them into Umbraco on startup.</Description>
