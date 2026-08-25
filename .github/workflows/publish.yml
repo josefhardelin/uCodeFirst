@@ -7,6 +7,11 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # Required for Trusted Publishing: without it GitHub will not issue the
+      # OIDC token and the NuGet/login step fails.
+      id-token: write
     steps:
       - uses: actions/checkout@v4
 
@@ -23,5 +28,15 @@ jobs:
       - name: Pack
         run: dotnet pack src/uCodeFirst/uCodeFirst.csproj --configuration Release --no-build --output ./artifacts
 
+      # Exchanges the GitHub OIDC token for a NuGet API key valid for 1 hour.
+      # Authorised by the Trusted Publishing policy on nuget.org, which is bound
+      # to owner + repo + this workflow file name. No long-lived secret exists.
+      - name: NuGet login (OIDC → short-lived key)
+        uses: NuGet/login@v1
+        id: login
+        with:
+          # nuget.org PROFILE NAME, not an email address.
+          user: ${{ secrets.NUGET_USER }}
+
       - name: Push to NuGet.org
-        run: dotnet nuget push "./artifacts/*.nupkg" --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
+        run: dotnet nuget push "./artifacts/*.nupkg" --api-key ${{ steps.login.outputs.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
