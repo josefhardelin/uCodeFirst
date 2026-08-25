@@ -92,6 +92,24 @@ The smallest slice that proves **write class → start site → query it** end-t
    validation (mandatory/type checks) before any DB write — meaningfully more scope than the stub, hence
    split out as its own backlog item rather than folded into "Content seeding."
 
+5. **Custom-configured ListView data types** — `[DocumentType(IsContainer: true)]`/`[MediaType(IsContainer:
+   true)]` only ever wire Umbraco's stock, unconfigured "List View - Content"/"List View - Media" GUIDs
+   (`ContentTypeSyncEngine.cs:263`/`:296`, `MediaTypeSyncEngine.cs:241`/`:264`) — there's no way to point a
+   content/media type at a custom-configured `Umbraco.ListView` data type (custom `pageSize`, `orderBy`,
+   `includeProperties`, etc.), which a real v17 export was found to want
+   (`docs/research/ucodefirst-vs-v17-usync-current-coverage.md`). Fixing it needs more than a new attribute
+   parameter: `DataTypeSyncEngine.EnsureFromPropertiesAsync` (`DataTypeSyncEngine.cs:44-56`) only discovers
+   `EditorRecipe`s by walking each definition's *properties* — `ListView` is a content/media-type-level
+   field, not a property, so it's structurally invisible to that discovery path and would need a second
+   feed into the same engine. Low priority: only ~1 of 69 content types and up to 6 of 20 media-type
+   folders in that export use a non-default list view.
+   **Related bug found along the way, independent of this gap**: the `existing.ListView = ...` assignment
+   on the *update* path (`ContentTypeSyncEngine.cs:296`, `MediaTypeSyncEngine.cs:264`) runs unconditionally
+   on every sync — so if someone manually points a type's list view at a custom data type through the
+   backoffice today, the very next sync silently overwrites it back to stock/`null`. Whatever fix lands
+   here must make the update path leave an existing `ListView` alone unless code-first actually has an
+   opinion about it, not just add the picker.
+
 ---
 
 ## Explicitly out of scope

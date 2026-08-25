@@ -51,3 +51,6 @@ public-docs/obj/
 public-docs/api/*
 !public-docs/api/index.md
 
+# Agent stuff
+docs/research
+
