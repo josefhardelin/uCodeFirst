@@ -55,8 +55,12 @@ expressed as C# attributes in this specific library, and this project's own conv
 6. **Configured editors can't be set via named attribute arguments** — `DataTypeBase`'s config properties
    (dropdown options, Block List/Grid contents, slider min/max/step, dynamic-root config) are get-only.
    They need their own `[DataType("...", Guid = "...")]`-decorated class subclassing the relevant
-   `*DataType` base and overriding the config properties/methods. See `Models/DataTypes/*.cs` for the
-   pattern (e.g. `ContentBlocksList : BlockListDataType`, `PrioritySlider : SliderDataType`).
+   `*DataType` base and overriding the config properties/methods. Every `*DataType` base (e.g.
+   `TagsDataType`, `SliderDataType`, `BlockListDataType`) lives in `uCodeFirst.DataTypes.Bases`, a
+   separate namespace from the ready-to-use `[Tags]`/`[Slider]`/etc. attributes in `uCodeFirst.DataTypes`
+   — add `using uCodeFirst.DataTypes.Bases;` alongside `using uCodeFirst.DataTypes;` when subclassing one.
+   See `Models/DataTypes/*.cs` for the pattern (e.g. `ContentBlocksList : BlockListDataType`,
+   `PrioritySlider : SliderDataType`).
 7. **`[AllowedChildren]` targets must themselves carry `[DocumentType]`/`[ElementType]`** — sync's
    pre-flight validation rejects dangling references before touching the database.
 8. **Not every document type needs a template.** Data-only or composition-only content types can skip

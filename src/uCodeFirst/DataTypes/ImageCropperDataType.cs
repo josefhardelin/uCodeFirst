@@ -1,7 +1,8 @@
+using uCodeFirst.DataTypes;
 using uCodeFirst.Sync;
 using Umbraco.Cms.Core.Models;
 
-namespace uCodeFirst.DataTypes;
+namespace uCodeFirst.DataTypes.Bases;
 
 /// <summary>Base for property editors backed by Umbraco's "Image Cropper" (<c>Umbraco.ImageCropper</c>) editor.</summary>
 public abstract class ImageCropperDataType : DataTypeBase

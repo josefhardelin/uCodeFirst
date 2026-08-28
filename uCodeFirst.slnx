@@ -3,4 +3,5 @@
   <Project Path="samples/Basicv17/Basicv17/Basicv17.csproj" />
   <Project Path="src/uCodeFirst.Analyzers/uCodeFirst.Analyzers.csproj" />
   <Project Path="tests/uCodeFirst.Tests/uCodeFirst.Tests.csproj" />
+  <Project Path="tests/uCodeFirst.Analyzers.Tests/uCodeFirst.Analyzers.Tests.csproj" />
 </Solution>

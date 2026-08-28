@@ -1,5 +1,6 @@
 using uCodeFirst.Attributes;
 using uCodeFirst.DataTypes;
+using uCodeFirst.DataTypes.Bases;
 
 namespace uCodeFirst.Tests.DataTypes;
 

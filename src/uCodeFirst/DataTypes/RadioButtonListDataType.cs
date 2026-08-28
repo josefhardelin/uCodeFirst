@@ -1,6 +1,7 @@
+using uCodeFirst.DataTypes;
 using uCodeFirst.Sync;
 
-namespace uCodeFirst.DataTypes;
+namespace uCodeFirst.DataTypes.Bases;
 
 /// <summary>Base for property editors backed by Umbraco's "Radio Button List" (<c>Umbraco.RadioButtonList</c>) editor.</summary>
 public abstract class RadioButtonListDataType : DataTypeBase

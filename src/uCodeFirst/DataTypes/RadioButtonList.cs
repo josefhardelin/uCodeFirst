@@ -1,4 +1,5 @@
 using uCodeFirst.Attributes;
+using uCodeFirst.DataTypes.Bases;
 
 namespace uCodeFirst.DataTypes;
 

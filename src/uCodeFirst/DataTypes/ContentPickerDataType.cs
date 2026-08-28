@@ -1,9 +1,10 @@
 using System.Reflection;
 using uCodeFirst.Attributes;
+using uCodeFirst.DataTypes;
 using uCodeFirst.Discovery;
 using uCodeFirst.Sync;
 
-namespace uCodeFirst.DataTypes;
+namespace uCodeFirst.DataTypes.Bases;
 
 /// <summary>Base for property editors backed by Umbraco's "Content Picker" (<c>Umbraco.ContentPicker</c>) editor.</summary>
 public abstract class ContentPickerDataType : DataTypeBase

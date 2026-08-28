@@ -1,6 +1,7 @@
+using uCodeFirst.DataTypes;
 using uCodeFirst.Sync;
 
-namespace uCodeFirst.DataTypes;
+namespace uCodeFirst.DataTypes.Bases;
 
 /// <summary>Base for property editors backed by Umbraco's "Upload Field" (<c>Umbraco.UploadField</c>) editor.</summary>
 public abstract class UploadFieldDataType : DataTypeBase

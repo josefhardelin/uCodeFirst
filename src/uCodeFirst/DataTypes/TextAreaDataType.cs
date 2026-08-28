@@ -1,7 +1,8 @@
+using uCodeFirst.DataTypes;
 using uCodeFirst.Sync;
 using Umbraco.Cms.Core.Models;
 
-namespace uCodeFirst.DataTypes;
+namespace uCodeFirst.DataTypes.Bases;
 
 /// <summary>Base for property editors backed by Umbraco's multi-line "Text Area" (<c>Umbraco.TextArea</c>) editor.</summary>
 public abstract class TextAreaDataType : DataTypeBase

@@ -1,6 +1,7 @@
 using System.Reflection;
 using uCodeFirst.Attributes;
 using uCodeFirst.DataTypes;
+using uCodeFirst.DataTypes.Bases;
 using uCodeFirst.Discovery;
 
 namespace uCodeFirst.Validation;

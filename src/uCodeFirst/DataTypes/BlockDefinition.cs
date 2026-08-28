@@ -1,3 +1,5 @@
+using uCodeFirst.DataTypes.Bases;
+
 namespace uCodeFirst.DataTypes;
 
 /// <summary>

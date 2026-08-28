@@ -157,6 +157,38 @@ Every document type needs a **stable, explicit GUID**, set via `Guid = "..."` (a
 
 All share `Name`, `Alias`, `Mandatory`, `Description` parameters.
 
+### `DataTypes` vs. `DataTypes.Bases`
+
+`uCodeFirst.DataTypes` holds only the ready-to-use attributes above (`Tags`, `Numeric`, `Dropdown`,
+...) — the namespace you `using` for everyday properties. The abstract class backing each one (e.g.
+`TagsDataType`, `NumericDataType`, `DropdownDataType`) lives in a separate `uCodeFirst.DataTypes.Bases`
+namespace instead.
+
+You only need the second namespace when subclassing a base to customize its config knobs, since
+`DataTypeBase` properties are get-only:
+
+```csharp
+using uCodeFirst.DataTypes.Bases;
+
+[DataType("Priority Slider", Guid = "...")]
+public sealed class PrioritySlider : SliderDataType
+{
+    public override int MinValue { get; } = 1;
+    public override int MaxValue { get; } = 5;
+}
+```
+
+This split exists to avoid a name collision: many display names for real Umbraco editors ("Tags",
+"Dropdown", "Numeric", "Content Picker"...) are also, understandably, natural names for the
+`XyzDataType` base classes a consumer would subclass. If a consumer's own `Consumer.DataTypes`
+namespace ever declared a type with the same simple name as one of these bases (e.g. its own
+`TagsDataType`), C# would silently bind every other `: TagsDataType` in that namespace to the
+consumer's own type instead of the library's — even in unrelated files — producing confusing
+`CS0509`/`CS0115` errors far from the real cause. Moving the bases to `DataTypes.Bases` makes that
+collision far less likely, since it no longer shares a namespace with the real-editor-name
+convention consumers use for their own types. The `UCF003` analyzer (below) catches what this
+doesn't.
+
 ### Groups (tabs)
 
 Use the `Groups` constants class or any string:
@@ -246,6 +278,7 @@ auto-populates agent config today; every real mechanism needs an explicit action
 - [x] Template linkage
 - [x] Code-first data type classes (`DataTypeBase` hierarchy, `[DataType]` attribute)
 - [x] Roslyn analyzer (UCF001 — build error on missing GUID, with code fixer)
+- [x] Roslyn analyzer (UCF003 — warns when a consumer type shadows a `uCodeFirst.*` base/wrapper type name)
 - [x] Media types
 - [x] Dictionary items (keys/hierarchy only — code owns structure, translations are backoffice/uSync-owned)
 - [x] Languages

@@ -1,5 +1,6 @@
 using uCodeFirst.Attributes;
 using uCodeFirst.DataTypes;
+using uCodeFirst.DataTypes.Bases;
 using Basicv17.Models.Blocks;
 
 namespace Basicv17.Models.DataTypes;

@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using Microsoft.Extensions.Logging.Abstractions;
 using uCodeFirst.Attributes;
 using uCodeFirst.DataTypes;
+using uCodeFirst.DataTypes.Bases;
 using uCodeFirst.Discovery;
 using uCodeFirst.Sync;
 using Umbraco.Cms.Core;

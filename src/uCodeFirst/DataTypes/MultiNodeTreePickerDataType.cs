@@ -1,10 +1,11 @@
 using System.Reflection;
 using uCodeFirst.Attributes;
+using uCodeFirst.DataTypes;
 using uCodeFirst.Discovery;
 using uCodeFirst.Sync;
 using Umbraco.Cms.Core.Models;
 
-namespace uCodeFirst.DataTypes;
+namespace uCodeFirst.DataTypes.Bases;
 
 /// <summary>Base for property editors backed by Umbraco's "Multinode Treepicker" (<c>Umbraco.MultiNodeTreePicker</c>) editor.</summary>
 public abstract class MultiNodeTreePickerDataType : DataTypeBase
