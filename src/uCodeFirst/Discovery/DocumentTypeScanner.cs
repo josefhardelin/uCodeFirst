@@ -124,12 +124,33 @@ internal sealed class DocumentTypeScanner
         return baseAttr.Key;
     }
 
-    private static IReadOnlyList<Guid> GetCompositionKeys(Type type) =>
-        type.GetInterfaces()
-            .Select(i => i.GetCustomAttribute<CompositionTypeAttribute>())
-            .Where(a => a is not null)
-            .Select(a => a!.Key)
-            .ToList();
+    // A [DocumentType]/[ElementType] class may compose exactly one other [DocumentType]/[ElementType]
+    // class by inheriting from it directly (e.g. `class Author : Person`) — no separate opt-in
+    // attribute needed, the base class relationship is itself the signal. This is on top of, not
+    // instead of, [CompositionType] interfaces, which remain the normal way to compose (unlimited,
+    // no single-inheritance ceiling). Type.GetInterfaces() already returns interfaces inherited from
+    // the base class, so those are excluded here to avoid composing the same interface twice — once
+    // directly and once transitively through the base type's own composition.
+    private static IReadOnlyList<Guid> GetCompositionKeys(Type type)
+    {
+        var keys = new List<Guid>();
+        var baseType = type.BaseType;
+
+        var baseCompositionKey = baseType?.GetCustomAttribute<DocumentTypeAttribute>()?.Key
+            ?? baseType?.GetCustomAttribute<ElementTypeAttribute>()?.Key;
+        if (baseCompositionKey is not null)
+            keys.Add(baseCompositionKey.Value);
+
+        var inheritedInterfaces = baseType?.GetInterfaces() ?? Type.EmptyTypes;
+        keys.AddRange(
+            type.GetInterfaces()
+                .Except(inheritedInterfaces)
+                .Select(i => i.GetCustomAttribute<CompositionTypeAttribute>())
+                .Where(a => a is not null)
+                .Select(a => a!.Key));
+
+        return keys;
+    }
 
     private static HashSet<string> GetCompositionPropertyNames(Type type) =>
         new(

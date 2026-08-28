@@ -39,9 +39,11 @@ internal sealed class ContentTypeSyncEngine
     {
         var aliasByKey = definitions.ToDictionary(d => d.Key, d => d.Alias);
 
-        // Keys of all composition types — used to clean up stale compositions on update
+        // Keys of every scanned definition — interfaces and, now, [DocumentType]/[ElementType] classes
+        // composed via base-class inheritance are both valid composition sources. Used to clean up
+        // stale compositions on update (any of these keys wired onto a live type but no longer in
+        // that type's CompositionKeys is ours to remove).
         var compositionTypeKeys = definitions
-            .Where(d => d.ClrType.IsInterface)
             .Select(d => d.Key)
             .ToHashSet();
 

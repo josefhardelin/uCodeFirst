@@ -26,6 +26,18 @@ public class PreFlightValidatorTests
         string? MetaTitle { get; set; }
     }
 
+    [DocumentType(Name: "Person Fixture", Guid = "20000000-0000-0000-0000-000000000005")]
+    private class PersonFixture { }
+
+    [DocumentType(Name: "Author Fixture", Guid = "20000000-0000-0000-0000-000000000006")]
+    private sealed class AuthorFixture : PersonFixture { }
+
+    [DocumentType(Name: "Base Person Fixture", Guid = "20000000-0000-0000-0000-000000000003")]
+    private class BasePersonFixture { }
+
+    [ElementType(Name: "Mismatched Element Fixture", Guid = "20000000-0000-0000-0000-000000000004")]
+    private sealed class MismatchedElementFixture : BasePersonFixture { }
+
     private static PropertyDefinition Property(string alias, string group = "Content") =>
         new(Alias: alias, Name: alias, GroupName: group, SortOrder: 0, Mandatory: false, Description: null, DataType: new TextString(), VariesByCulture: false);
 
@@ -38,10 +50,11 @@ public class PreFlightValidatorTests
         Guid key,
         IReadOnlyList<PropertyDefinition>? properties = null,
         IReadOnlyList<Type>? allowedChildTypes = null,
-        IReadOnlyList<Guid>? compositionKeys = null) =>
+        IReadOnlyList<Guid>? compositionKeys = null,
+        bool isElement = false) =>
         new(
             ClrType: clrType,
-            IsElement: false,
+            IsElement: isElement,
             Key: key,
             Alias: alias,
             Name: alias,
@@ -162,6 +175,39 @@ public class PreFlightValidatorTests
         var errors = new PreFlightValidator().Validate(new[] { child, parent });
 
         Assert.That(errors, Is.Empty);
+    }
+
+    // --- Composition via base-class inheritance -------------------------------------------------
+
+    [Test]
+    public void BaseClassComposition_MatchingKind_ProducesNoError()
+    {
+        var person = Definition(typeof(PersonFixture), alias: "person", key: Guid.Parse("20000000-0000-0000-0000-000000000005"));
+        var author = Definition(
+            typeof(AuthorFixture),
+            alias: "author",
+            key: Guid.Parse("20000000-0000-0000-0000-000000000006"),
+            compositionKeys: new[] { person.Key });
+
+        var errors = new PreFlightValidator().Validate(new[] { person, author });
+
+        Assert.That(errors, Is.Empty);
+    }
+
+    [Test]
+    public void BaseClassComposition_DocumentTypeComposingElementTypeBase_ProducesError()
+    {
+        var basePerson = Definition(typeof(BasePersonFixture), alias: "basePerson", key: Guid.Parse("20000000-0000-0000-0000-000000000003"));
+        var mismatched = Definition(
+            typeof(MismatchedElementFixture),
+            alias: "mismatchedElement",
+            key: Guid.Parse("20000000-0000-0000-0000-000000000004"),
+            compositionKeys: new[] { basePerson.Key },
+            isElement: true);
+
+        var errors = new PreFlightValidator().Validate(new[] { basePerson, mismatched });
+
+        Assert.That(errors, Has.Some.Contains("composition requires both to be the same kind"));
     }
 
     // --- ContentPicker / MultiNodeTreePicker document-type references ----------------------------

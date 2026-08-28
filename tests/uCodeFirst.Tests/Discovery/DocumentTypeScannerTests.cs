@@ -68,6 +68,36 @@ public class DocumentTypeScannerTests
         public string? Headline { get; set; }
     }
 
+    [DocumentType(Name: "Person Fixture", Guid = "10000000-0000-0000-0000-00000000000a")]
+    private class PersonFixture : ISeoComposition
+    {
+        public string? MetaTitle { get; set; }
+
+        [TextString]
+        public string? PersonName { get; set; }
+    }
+
+    [DocumentType(Name: "Author Fixture", Guid = "10000000-0000-0000-0000-00000000000b")]
+    private sealed class AuthorFixture : PersonFixture
+    {
+        [TextString]
+        public string? Bio { get; set; }
+    }
+
+    [ElementType(Name: "Base Block Fixture", Guid = "10000000-0000-0000-0000-00000000000c")]
+    private class BaseBlockFixture
+    {
+        [TextString]
+        public string? Label { get; set; }
+    }
+
+    [ElementType(Name: "Derived Block Fixture", Guid = "10000000-0000-0000-0000-00000000000d")]
+    private sealed class DerivedBlockFixture : BaseBlockFixture
+    {
+        [TextString]
+        public string? ExtraField { get; set; }
+    }
+
     [DocumentType(Name: "Child Fixture", Guid = "10000000-0000-0000-0000-000000000006")]
     private sealed class ChildFixture { }
 
@@ -251,6 +281,51 @@ public class DocumentTypeScannerTests
         // attribute) to satisfy the interface.
         Assert.That(def.Properties, Has.Count.EqualTo(1));
         Assert.That(def.Properties[0].Alias, Is.EqualTo("headline"));
+    }
+
+    // --- Composition via base-class inheritance -------------------------------------------------
+
+    [Test]
+    public void Scan_ClassInheritingDocumentType_AddsBaseKeyToCompositionKeys()
+    {
+        var author = Find<AuthorFixture>();
+        var personKey = Find<PersonFixture>().Key;
+
+        Assert.That(author.CompositionKeys, Does.Contain(personKey));
+    }
+
+    [Test]
+    public void Scan_ClassInheritingDocumentType_ScansOnlyOwnDeclaredProperties()
+    {
+        var author = Find<AuthorFixture>();
+
+        // "bio" is declared directly on AuthorFixture. "personName"/"metaTitle" belong to Person and
+        // are inherited via plain C# inheritance -- not rescanned onto Author's own property list.
+        Assert.That(author.Properties.Select(p => p.Alias), Is.EqualTo(new[] { "bio" }));
+    }
+
+    [Test]
+    public void Scan_ClassInheritingDocumentType_DoesNotDuplicateBaseClassesOwnInterfaceComposition()
+    {
+        // AuthorFixture implements ISeoComposition only transitively, by inheriting PersonFixture
+        // (which implements it directly). Type.GetInterfaces() returns that interface for both
+        // types, so without excluding interfaces already covered by the base type, Author would end
+        // up composing ISeoComposition a second time on top of composing Person itself (who already
+        // composes it) -- Author's CompositionKeys must contain only Person's key.
+        var author = Find<AuthorFixture>();
+        var personKey = Find<PersonFixture>().Key;
+
+        Assert.That(author.CompositionKeys, Is.EqualTo(new[] { personKey }));
+    }
+
+    [Test]
+    public void Scan_ElementTypeInheritingElementType_AddsBaseKeyToCompositionKeys()
+    {
+        var derived = Find<DerivedBlockFixture>();
+        var baseKey = Find<BaseBlockFixture>().Key;
+
+        Assert.That(derived.CompositionKeys, Does.Contain(baseKey));
+        Assert.That(derived.Properties.Select(p => p.Alias), Is.EqualTo(new[] { "extraField" }));
     }
 
     // --- AllowedChildren ----------------------------------------------------------------------

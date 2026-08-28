@@ -21,7 +21,7 @@ expressed as C# attributes in this specific library, and this project's own conv
 | Document type (page / tree node) | `[DocumentType]` on a `partial class : PublishedContentModel` |
 | Element type (Block List/Grid item content, not a tree node) | `[ElementType]` on a `partial class : PublishedElementModel` |
 | Media type | `[MediaType]` on a `partial class`; inherit a `uCodeFirst.BuiltIn.Umbraco*Model` stub (e.g. `UmbracoImageModel`) to extend a built-in type |
-| Composition (mixin) | `[CompositionType]` on an `interface`, implemented by the doctype/element class |
+| Composition (mixin) | `[CompositionType]` on an `interface`, implemented by the doctype/element class (unlimited, the normal way to compose) — or a doctype/element class inheriting directly from *one* other `[DocumentType]`/`[ElementType]` class (e.g. `class Author : Person`), which also pulls in that base class's already-written `Value<T>` getters for free. See rule 9 |
 | Data type / property editor | An attribute on a property: `[TextString]`, `[TextArea]`, `[RichText]`, `[Numeric]`, `[TrueFalse]`, `[DatePicker]`, `[Dropdown]`, `[MediaPicker3]`, `[ContentPicker]`, `[MultiNodeTreePicker]`, `[MultiUrlPicker]`, `[Tags]`, `[ColorPicker]`, `[Slider]`, `[MemberPicker]`, `[UploadField]`, `[Label]`, `[CheckBoxList]`, `[RadioButtonList]`, `[ImageCropper]` |
 | Configured/shared editor (dropdown options, Block List/Grid contents, slider min/max, dynamic-root pickers) | A custom class subclassing the relevant `*DataType` base, decorated `[DataType]` — see `Models/DataTypes/*.cs` in this sample |
 | Tab/group | `[Group(Groups.X, SortOrder: n)]` on each property |
@@ -65,6 +65,23 @@ expressed as C# attributes in this specific library, and this project's own conv
    pre-flight validation rejects dangling references before touching the database.
 8. **Not every document type needs a template.** Data-only or composition-only content types can skip
    `DefaultTemplate` and have no corresponding `.cshtml` (see `BlogPost.cs` in this sample).
+9. **Composing another document/element type via inheritance is implicit — no extra attribute.**
+   `class Author : Person` (where `Person` itself carries `[DocumentType]`) is automatically synced as
+   Author composing Person in Umbraco; the base-class relationship *is* the signal. Rules:
+   - Only **one** concrete `[DocumentType]`/`[ElementType]` base this way (C# single inheritance) — but
+     it can be combined with any number of `[CompositionType]` interfaces on top, e.g.
+     `class Author : Person, ISeoComposition`.
+   - Both sides must be the same kind — a `[DocumentType]` can't inherit an `[ElementType]` base or vice
+     versa; pre-flight validation rejects this before touching the database.
+   - Declare the base class's `IPublishedValueFallback` field `protected` (not `private`), e.g.
+     `protected readonly IPublishedValueFallback _publishedValueFallback;`, so the derived class's own
+     `Value<T>` getters can reuse it instead of redeclaring the field. See `Models/Pages/Person.cs` and
+     `Models/Pages/Author.cs` in this sample for the full pattern.
+   - Prefer this over a `[CompositionType]` interface specifically when the composed-in properties
+     should come with zero re-implementation (no ModelsBuilder means an interface composition needs
+     every property re-implemented explicitly on the composing class, e.g.
+     `Models/Compositions/ISeoComposition.cs` + `StartPage.cs`'s explicit interface implementation) —
+     otherwise interfaces remain the default choice, especially when more than one composition applies.
 
 ## Scaffolding a new page/document type — procedure
 
@@ -96,7 +113,9 @@ reusable nested content (Block List/Grid).
   `[Template]`-decorated fields) or create a new one.
 - **Folder placement**: propose one based on sibling types (e.g. `"Pages"`) but confirm if ambiguous.
 - **Compositions**: whether an existing `[CompositionType]` interface in the project applies (scan
-  `Models/Compositions/` or equivalent) — never silently attach or silently skip one that looks relevant.
+  `Models/Compositions/` or equivalent), or whether the new type should compose an existing page via
+  base-class inheritance instead (rule 9) — never silently attach or silently skip one that looks
+  relevant.
 - **Block List/Grid usage**: if the request implies reusable nested content blocks, confirm whether to
   wire an existing element type or scaffold a new one.
 - **Structure**: whether the type is allowed at root (`AllowedAtRoot`) and what may be created under it

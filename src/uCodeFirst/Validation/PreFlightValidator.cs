@@ -132,6 +132,9 @@ internal sealed class PreFlightValidator
         }
 
         // Validate composition keys
+        var defByKey = new Dictionary<Guid, DocumentTypeDefinition>();
+        foreach (var d in definitions)
+            defByKey.TryAdd(d.Key, d);
         foreach (var def in definitions)
         {
             foreach (var compKey in def.CompositionKeys)
@@ -144,7 +147,19 @@ internal sealed class PreFlightValidator
                             var a = i.GetCustomAttribute<CompositionTypeAttribute>();
                             return a?.Key == compKey;
                         });
-                    errors.Add($"'{def.ClrType.FullName}' uses composition '{compInterface?.FullName ?? compKey.ToString()}' which was not discovered in the scanned assembly set.");
+                    var compSourceName = compInterface?.FullName ?? def.ClrType.BaseType?.FullName;
+                    errors.Add($"'{def.ClrType.FullName}' uses composition '{compSourceName ?? compKey.ToString()}' which was not discovered in the scanned assembly set.");
+                    continue;
+                }
+
+                // A base-class composition (`class Author : Person`) must compose a class of the
+                // same kind — a [DocumentType] composing an [ElementType] base (or vice versa) fails
+                // in Umbraco anyway, but this catches it before ever touching the database.
+                if (def.ClrType.BaseType == defByKey[compKey].ClrType && defByKey[compKey].IsElement != def.IsElement)
+                {
+                    var defKind = def.IsElement ? "[ElementType]" : "[DocumentType]";
+                    var compKind = defByKey[compKey].IsElement ? "[ElementType]" : "[DocumentType]";
+                    errors.Add($"'{def.ClrType.FullName}' ({defKind}) composes '{def.ClrType.BaseType!.FullName}' ({compKind}) via inheritance, but composition requires both to be the same kind.");
                 }
             }
         }
