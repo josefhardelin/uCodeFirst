@@ -8,7 +8,7 @@
     <!-- Major tracks the Umbraco major this targets (uSync convention); minor
          and patch are ours. The [17.4.2, 18.0.0) pin below is the separate
          minimum-Umbraco statement. -->
-    <Version>17.0.0-beta.1</Version>
+    <Version>17.0.0-beta.2</Version>
     <Authors>Josef Härdelin</Authors>
     <Description>Code-first schema authoring for Umbraco CMS 17+. Define document types as C#
       classes; the package syncs them into Umbraco on startup.</Description>
