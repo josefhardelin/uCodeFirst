@@ -259,10 +259,12 @@ internal sealed class DocumentTypeScanner
             {
                 if (!field.IsLiteral || field.FieldType != typeof(string))
                     continue;
-                if (!field.IsDefined(typeof(DictionaryItemAttribute)))
+
+                var attribute = field.GetCustomAttribute<DictionaryItemAttribute>();
+                if (attribute is null)
                     continue;
 
-                var itemKey = (string)field.GetRawConstantValue()!;
+                var itemKey = attribute.Alias ?? (string)field.GetRawConstantValue()!;
                 definitions.Add(new DictionaryItemDefinition(field, itemKey, GetParentChain(type)));
             }
         }
@@ -271,15 +273,18 @@ internal sealed class DocumentTypeScanner
     }
 
     // Nested static classes become real parent dictionary items; the outermost (non-nested)
-    // declaring type is treated as pure C#-side grouping and never becomes an item itself.
-    private static IReadOnlyList<Type> GetParentChain(Type declaringType)
+    // declaring type is treated as pure C#-side grouping and never becomes an item itself. A
+    // [DictionaryItem(Alias = "...")] on the class overrides its key (needed for keys a C#
+    // identifier can't spell, e.g. containing spaces); otherwise the class name is used verbatim.
+    private static IReadOnlyList<string> GetParentChain(Type declaringType)
     {
-        var chain = new List<Type>();
+        var chain = new List<string>();
         var current = declaringType;
 
         while (current.IsNested)
         {
-            chain.Insert(0, current);
+            var alias = current.GetCustomAttribute<DictionaryItemAttribute>()?.Alias ?? current.Name;
+            chain.Insert(0, alias);
             current = current.DeclaringType!;
         }
 

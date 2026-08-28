@@ -28,7 +28,7 @@ expressed as C# attributes in this specific library, and this project's own conv
 | Template | An enum member decorated `[Template(Alias: "...", Master: Other)]`, referenced by `[DocumentType(DefaultTemplate: "alias")]` |
 | Master/parent template | `Master:` param on `[Template]`, pointing at another member of the same enum |
 | Allowed children | `[AllowedChildren(typeof(X), typeof(Y))]` on the parent doctype |
-| Dictionary item | `[DictionaryItem]` on a `const string` field; nested static classes become parent items |
+| Dictionary item | `[DictionaryItem]` on a `const string` field; nested static classes become parent items. Key defaults to the const's `nameof(...)` value (field) or the class name (parent) — set `Alias = "..."` on either when the real Umbraco key needs characters a C# identifier can't hold, e.g. spaces (see `Models/Dictionary/DictionaryKeys.cs`) |
 | Language | `[Language(IsoCode: "...", Fallback:, IsMandatory:)]` on an enum member, `[Languages(DefaultLanguage:)]` on the enum itself |
 | Backoffice folder (Content Types tree grouping) | `Folder: "Pages"` / `"Pages/Articles"` param, any type-declaring attribute |
 
@@ -76,7 +76,9 @@ reusable nested content (Block List/Grid).
   "title" → `[TextString]`; "body"/"content" (long-form) → `[RichText]`; "summary"/"excerpt" →
   `[TextArea]`; a date-sounding name → `[DatePicker]`; boolean-sounding ("is X", "has X") → `[TrueFalse]`;
   a closed set of options → `[Dropdown]` or a custom `[DataType]` subclass if the options need to be
-  shared/reused.
+  shared/reused; free-form keyword/tag lists → `[Tags]` (defaults: comma delimiter, "default" tag
+  group, JSON storage) — subclass `TagsDataType` to change `Delimiter`, `Group`, or `StorageType` (see
+  `Models/DataTypes/SeoKeywordsTags.cs`).
 - `Alias` — leave unset unless the request specifies one.
 - Group/tab placement — mirror the closest existing sibling document type in this project (most content
   goes in one `Groups.Content` tab unless there's a clear `Groups.Settings`/`Groups.SEO` split already in

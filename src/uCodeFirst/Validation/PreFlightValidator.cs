@@ -270,7 +270,7 @@ internal sealed class PreFlightValidator
     private static void ValidateDictionaryItems(IReadOnlyList<DictionaryItemDefinition> definitions, List<string> errors)
     {
         var ownerByKey = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        var seenContainers = new HashSet<Type>();
+        var seenContainers = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         void Claim(string itemKey, string origin)
         {
@@ -285,7 +285,7 @@ internal sealed class PreFlightValidator
             foreach (var container in def.ParentChain)
             {
                 if (seenContainers.Add(container))
-                    Claim(container.Name, $"container class '{container.FullName}'");
+                    Claim(container, $"container '{container}'");
             }
 
             Claim(def.ItemKey, $"field '{def.Field.DeclaringType?.FullName}.{def.Field.Name}'");

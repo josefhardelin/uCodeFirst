@@ -32,8 +32,8 @@ internal sealed class DictionaryItemSyncEngine
         foreach (var def in definitions)
         {
             Guid? parentKey = null;
-            foreach (var container in def.ParentChain)
-                parentKey = await EnsureItemAsync(container.Name, parentKey, resolved);
+            foreach (var containerKey in def.ParentChain)
+                parentKey = await EnsureItemAsync(containerKey, parentKey, resolved);
 
             await EnsureItemAsync(def.ItemKey, parentKey, resolved);
         }

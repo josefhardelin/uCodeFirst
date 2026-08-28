@@ -88,6 +88,9 @@ public class DocumentTypeScannerTests
     [DictionaryItem]
     public const string RootGreeting = nameof(RootGreeting);
 
+    [DictionaryItem(Alias = "Button Text")]
+    public const string ButtonTextKey = nameof(ButtonTextKey);
+
     private static class Emails
     {
         public static class Welcome
@@ -95,6 +98,13 @@ public class DocumentTypeScannerTests
             [DictionaryItem]
             public const string Subject = nameof(Subject);
         }
+    }
+
+    [DictionaryItem(Alias = "Button Group")]
+    private static class AliasedParentFixture
+    {
+        [DictionaryItem]
+        public const string Label = nameof(Label);
     }
 
     private static IReadOnlyList<Assembly> Assemblies => new[] { typeof(DocumentTypeScannerTests).Assembly };
@@ -293,17 +303,36 @@ public class DocumentTypeScannerTests
             .Single(d => d.Field.DeclaringType == typeof(Emails.Welcome));
 
         Assert.That(def.ItemKey, Is.EqualTo("Subject"));
-        Assert.That(def.ParentChain, Is.EqualTo(new[] { typeof(Emails), typeof(Emails.Welcome) }));
+        Assert.That(def.ParentChain, Is.EqualTo(new[] { "Emails", "Welcome" }));
     }
 
     [Test]
     public void ScanDictionaryItems_TopLevelField_HasEmptyParentChain()
     {
         var def = new DocumentTypeScanner().ScanDictionaryItems(Assemblies)
-            .Single(d => d.Field.DeclaringType == typeof(DocumentTypeScannerTests));
+            .Single(d => d.Field.DeclaringType == typeof(DocumentTypeScannerTests) && d.Field.Name == nameof(RootGreeting));
 
         Assert.That(def.ItemKey, Is.EqualTo("RootGreeting"));
         Assert.That(def.ParentChain, Is.Empty);
+    }
+
+    [Test]
+    public void ScanDictionaryItems_FieldWithAlias_UsesAliasAsItemKey()
+    {
+        var def = new DocumentTypeScanner().ScanDictionaryItems(Assemblies)
+            .Single(d => d.Field.DeclaringType == typeof(DocumentTypeScannerTests) && d.Field.Name == nameof(ButtonTextKey));
+
+        Assert.That(def.ItemKey, Is.EqualTo("Button Text"));
+    }
+
+    [Test]
+    public void ScanDictionaryItems_ParentClassWithAlias_UsesAliasInParentChain()
+    {
+        var def = new DocumentTypeScanner().ScanDictionaryItems(Assemblies)
+            .Single(d => d.Field.DeclaringType == typeof(AliasedParentFixture));
+
+        Assert.That(def.ItemKey, Is.EqualTo("Label"));
+        Assert.That(def.ParentChain, Is.EqualTo(new[] { "Button Group" }));
     }
 
     // --- SeedContent ------------------------------------------------------------------------------

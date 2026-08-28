@@ -294,8 +294,8 @@ public class PreFlightValidatorTests
 
         var definitions = new[]
         {
-            new DictionaryItemDefinition(fieldA, "Greeting", Array.Empty<Type>()),
-            new DictionaryItemDefinition(fieldB, "Greeting", Array.Empty<Type>()),
+            new DictionaryItemDefinition(fieldA, "Greeting", Array.Empty<string>()),
+            new DictionaryItemDefinition(fieldB, "Greeting", Array.Empty<string>()),
         };
 
         var errors = new PreFlightValidator().Validate(Array.Empty<DocumentTypeDefinition>(), dictionaryDefinitions: definitions);
@@ -306,14 +306,14 @@ public class PreFlightValidatorTests
     [Test]
     public void DictionaryItems_LeafKeyCollidingWithAutoCreatedParentContainerName_ProducesError()
     {
-        // Parent chain [DictionaryContainerFixture] means a parent DictionaryItem named after that
-        // class (ValidateDictionaryItems claims `container.Name`) is auto-created. A leaf item
-        // literally keyed with that same class name collides with the auto-created parent.
+        // Parent chain ["DictionaryContainerFixture"] means a parent DictionaryItem with that key
+        // (ValidateDictionaryItems claims it) is auto-created. A leaf item literally keyed with
+        // that same class name collides with the auto-created parent.
         var field = typeof(DictionaryFixtureA).GetField(nameof(DictionaryFixtureA.Greeting))!;
 
         var definitions = new[]
         {
-            new DictionaryItemDefinition(field, nameof(DictionaryContainerFixture), new[] { typeof(DictionaryContainerFixture) }),
+            new DictionaryItemDefinition(field, nameof(DictionaryContainerFixture), new[] { nameof(DictionaryContainerFixture) }),
         };
 
         var errors = new PreFlightValidator().Validate(Array.Empty<DocumentTypeDefinition>(), dictionaryDefinitions: definitions);
@@ -348,7 +348,7 @@ public class PreFlightValidatorTests
             allowedChildTypes: new[] { typeof(ValidChildFixture) });
 
         var dictionaryField = typeof(DictionaryFixtureA).GetField(nameof(DictionaryFixtureA.Greeting))!;
-        var dictionaryDefinitions = new[] { new DictionaryItemDefinition(dictionaryField, "Greeting", Array.Empty<Type>()) };
+        var dictionaryDefinitions = new[] { new DictionaryItemDefinition(dictionaryField, "Greeting", Array.Empty<string>()) };
 
         var errors = new PreFlightValidator().Validate(new[] { child, parent }, dictionaryDefinitions: dictionaryDefinitions);
 

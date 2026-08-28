@@ -72,4 +72,11 @@ public partial class BlogPost : PublishedContentModel
     [Group(Groups.Settings, SortOrder: 2)]
     [PostCategoryDropdown(Name = "Category")]
     public string? Category => this.Value<string>(_publishedValueFallback, "category");
+
+    // Search-engine keywords, kept in a separate "seo" tag group with a pipe delimiter for
+    // pasted lists (see Models/DataTypes/SeoKeywordsTags.cs) — contrast with Topics above, which
+    // uses the plain [Tags] default (comma delimiter, "default" group).
+    [Group(Groups.SEO, SortOrder: 0)]
+    [SeoKeywordsTags(Name = "Keywords")]
+    public IEnumerable<string>? SeoKeywords => this.Value<IEnumerable<string>>(_publishedValueFallback, "seoKeywords");
 }

@@ -10,6 +10,8 @@ public abstract class TagsDataType : DataTypeBase
     public virtual string Group { get; } = "default";
     /// <summary>"Json" or "Csv".</summary>
     public virtual string StorageType { get; } = "Json";
+    /// <summary>Character used to separate tags when typing/pasting a list at once.</summary>
+    public virtual char Delimiter { get; } = ',';
 
     /// <inheritdoc/>
     public override EditorRecipe BuildRecipe(Guid key, string name)
@@ -17,7 +19,8 @@ public abstract class TagsDataType : DataTypeBase
         IDictionary<string, object> config = new Dictionary<string, object>
         {
             ["group"] = Group,
-            ["storageType"] = StorageType
+            ["storageType"] = StorageType,
+            ["delimiter"] = Delimiter
         };
         return new EditorRecipe(key, name, "Umbraco.Tags", "Umb.PropertyEditorUi.Tags", config, ValueStorageType.Ntext);
     }
