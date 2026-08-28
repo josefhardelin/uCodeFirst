@@ -1,26 +1,18 @@
 namespace uCodeFirst.Attributes;
 
 /// <summary>
-/// Marks an enum member as a code-first Umbraco template, declaring its position in Umbraco's
-/// master/parent template hierarchy. Unlike <see cref="LanguagesAttribute"/>, there's no
-/// single-enum or default-member requirement — any number of enums may carry
-/// <see cref="TemplateAttribute"/>-decorated members, and the enum can also hold unrelated values.
+/// Marks a <c>const string</c> field as a code-first Umbraco template. The field's own literal
+/// value is the template's alias — matched verbatim against a document/element type's
+/// DefaultTemplate, so there's no separate alias to keep in sync. Any number of classes may carry
+/// <see cref="TemplateAttribute"/>-decorated fields, and a class can also hold unrelated consts.
 /// </summary>
 [AttributeUsage(AttributeTargets.Field, AllowMultiple = false, Inherited = false)]
 public sealed class TemplateAttribute : Attribute
 {
-    /// <param name="Alias">Alias of the template. Matched against a document/element type's DefaultTemplate.</param>
-    public TemplateAttribute(string Alias)
-    {
-        this.Alias = Alias;
-    }
-
-    /// <summary>Alias of the template. Matched against a document/element type's DefaultTemplate.</summary>
-    public string Alias { get; }
-
     /// <summary>
-    /// The enum member (of the same enum) that is this template's master/parent template. Must
-    /// itself carry <see cref="TemplateAttribute"/>. Leave unset for a top-level template.
+    /// The sibling <c>const string</c> field (declared in the same class) that is this template's
+    /// master/parent template — e.g. <c>Master: Layout</c>. Must itself carry
+    /// <see cref="TemplateAttribute"/>. Leave unset for a top-level template.
     /// </summary>
-    public object? Master { get; set; }
+    public string? Master { get; set; }
 }

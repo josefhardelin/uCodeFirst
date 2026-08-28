@@ -25,8 +25,8 @@ expressed as C# attributes in this specific library, and this project's own conv
 | Data type / property editor | An attribute on a property: `[TextString]`, `[TextArea]`, `[RichText]`, `[Numeric]`, `[TrueFalse]`, `[DatePicker]`, `[Dropdown]`, `[MediaPicker3]`, `[ContentPicker]`, `[MultiNodeTreePicker]`, `[MultiUrlPicker]`, `[Tags]`, `[ColorPicker]`, `[Slider]`, `[MemberPicker]`, `[UploadField]`, `[Label]`, `[CheckBoxList]`, `[RadioButtonList]`, `[ImageCropper]` |
 | Configured/shared editor (dropdown options, Block List/Grid contents, slider min/max, dynamic-root pickers) | A custom class subclassing the relevant `*DataType` base, decorated `[DataType]` — see `Models/DataTypes/*.cs` in this sample |
 | Tab/group | `[Group(Groups.X, SortOrder: n)]` on each property |
-| Template | An enum member decorated `[Template(Alias: "...", Master: Other)]`, referenced by `[DocumentType(DefaultTemplate: "alias")]` |
-| Master/parent template | `Master:` param on `[Template]`, pointing at another member of the same enum |
+| Template | A `[Template]`-decorated `const string` field on a `static class`; the field's own literal value is the alias, referenced by `[DocumentType(DefaultTemplate: Templates.X)]` — no separate alias string to keep in sync (see `Models/Templates.cs`) |
+| Master/parent template | `Master =` property on `[Template]`, set to another `const string` field declared in the same class, e.g. `Master = Layout` |
 | Allowed children | `[AllowedChildren(typeof(X), typeof(Y))]` on the parent doctype |
 | Dictionary item | `[DictionaryItem]` on a `const string` field; nested static classes become parent items. Key defaults to the const's `nameof(...)` value (field) or the class name (parent) — set `Alias = "..."` on either when the real Umbraco key needs characters a C# identifier can't hold, e.g. spaces (see `Models/Dictionary/DictionaryKeys.cs`) |
 | Language | `[Language(IsoCode: "...", Fallback:, IsMandatory:)]` on an enum member, `[Languages(DefaultLanguage:)]` on the enum itself |
@@ -92,8 +92,8 @@ reusable nested content (Block List/Grid).
 - `Guid` — leave unset, rely on `UCF001`'s code fixer.
 
 **Step 3 — always confirm before writing code** (surface these explicitly; don't silently guess):
-- **Template**: reuse an existing template/master (list the candidates from the project's
-  `[Template]`-decorated enum) or create a new one.
+- **Template**: reuse an existing template/master (list the candidates from `Models/Templates.cs`'s
+  `[Template]`-decorated fields) or create a new one.
 - **Folder placement**: propose one based on sibling types (e.g. `"Pages"`) but confirm if ambiguous.
 - **Compositions**: whether an existing `[CompositionType]` interface in the project applies (scan
   `Models/Compositions/` or equivalent) — never silently attach or silently skip one that looks relevant.
@@ -108,11 +108,13 @@ attributes). Match the project's existing namespace/folder convention (e.g. `Mod
 `Models/Blocks/`).
 
 **Step 5 — template + view**, only if Step 3 confirmed a template is needed:
-- Reusing an existing template: just set `DefaultTemplate` to its alias.
-- New template: add a `[Template(Alias: "...", Master: ...)]` member to the project's template enum, and
-  create `Views/<Alias>.cshtml` (`@inherits Umbraco.Cms.Web.Common.Views.UmbracoViewPage<TheClass>`,
-  rendering the properties the class exposes). Mirror an existing `.cshtml` in `Views/` for the exact
-  boilerplate — only set `Layout = "_Layout.cshtml"` if the template has a master.
+- Reusing an existing template: just set `DefaultTemplate` to its `Templates.X` const.
+- New template: add a `[Template]`-decorated `const string` field to `Models/Templates.cs` (e.g.
+  `[Template(Master = Layout)] public const string ArticlePage = "articlePage";`), reference it via
+  `DefaultTemplate: Templates.ArticlePage`, and create `Views/<alias>.cshtml`
+  (`@inherits Umbraco.Cms.Web.Common.Views.UmbracoViewPage<TheClass>`, rendering the properties the
+  class exposes). Mirror an existing `.cshtml` in `Views/` for the exact boilerplate — only set
+  `Layout = "_Layout.cshtml"` if the template has a master.
 
 **Step 6 — report back what was inferred vs. confirmed**, so the developer can correct any inferred
 choice (property→editor mapping, group, icon/color) after the fact instead of being interrupted for each

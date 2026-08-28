@@ -325,9 +325,11 @@ internal sealed class DocumentTypeScanner
         return definitions;
     }
 
-    // Unlike ScanLanguages, no enum-level marker attribute is required — [Template] isn't as
-    // singular a concept as "the language set", so any number of enums may carry
-    // [Template]-decorated members alongside unrelated values.
+    // Mirrors ScanDictionaryItems: any class may carry [Template]-decorated const string fields
+    // alongside unrelated members. Unlike dictionary items, templates have no parent-chain concept
+    // (nesting is never scanned) — Master resolves only against sibling fields of the *same*
+    // declaring class, matched by their literal value (the alias itself), since the field's own
+    // const value already IS the alias with no separate override to drift out of sync.
     public IReadOnlyList<TemplateDefinition> ScanTemplates(IEnumerable<Assembly> assemblies)
     {
         var definitions = new List<TemplateDefinition>();
@@ -340,16 +342,25 @@ internal sealed class DocumentTypeScanner
             })
             .ToList();
 
-        foreach (var enumType in allTypes.Where(t => t.IsEnum))
+        foreach (var type in allTypes.Where(t => t.IsClass))
         {
-            foreach (var field in enumType.GetFields(BindingFlags.Public | BindingFlags.Static))
+            var stringConstFields = type
+                .GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly)
+                .Where(f => f.IsLiteral && f.FieldType == typeof(string))
+                .ToList();
+
+            foreach (var field in stringConstFields)
             {
                 var templateAttr = field.GetCustomAttribute<TemplateAttribute>();
                 if (templateAttr is null)
                     continue;
 
-                var master = ResolveEnumMember(enumType, templateAttr.Master);
-                definitions.Add(new TemplateDefinition(field, templateAttr.Alias, master));
+                var alias = (string)field.GetRawConstantValue()!;
+                var master = templateAttr.Master is null
+                    ? null
+                    : stringConstFields.FirstOrDefault(f => (string)f.GetRawConstantValue()! == templateAttr.Master);
+
+                definitions.Add(new TemplateDefinition(field, alias, master));
             }
         }
 

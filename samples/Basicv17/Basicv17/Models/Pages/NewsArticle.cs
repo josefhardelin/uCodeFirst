@@ -5,6 +5,7 @@ using Umbraco.Cms.Core.Models.PublishedContent;
 using Umbraco.Cms.Core.Strings;
 using Umbraco.Cms.Web.Common.PublishedModels;
 using Umbraco.Extensions;
+using Basicv17.Models;
 
 namespace Basicv17.Models.Pages;
 
@@ -12,7 +13,7 @@ namespace Basicv17.Models.Pages;
     Icon: ContentTypeIcon.Newspaper,
     Color: ContentTypeColor.Yellow,
     Folder: "Pages",
-    DefaultTemplate: "newsArticle",
+    DefaultTemplate: Templates.NewsArticle,
     VariesByCulture: true,
     Guid = "8f3c1a2b-3e4d-4f5a-b6c7-d8e9f0a1b2c3")]
 [PublishedModel("newsArticle")]

@@ -6,6 +6,7 @@ using Umbraco.Cms.Core.Models.PublishedContent;
 using Umbraco.Cms.Core.Strings;
 using Umbraco.Cms.Web.Common.PublishedModels;
 using Umbraco.Extensions;
+using Basicv17.Models;
 using Basicv17.Models.Blocks;
 using Basicv17.Models.Compositions;
 using Basicv17.Models.DataTypes;
@@ -17,7 +18,7 @@ namespace Basicv17.Models.Pages;
     Color: ContentTypeColor.Blue,
     AllowedAtRoot: true,
     Folder: "Pages",
-    DefaultTemplate: "startPage",
+    DefaultTemplate: Templates.StartPage,
     // News articles live directly under the start page — show them as a sortable/filterable
     // list view in the backoffice instead of a tree.
     IsContainer: true,

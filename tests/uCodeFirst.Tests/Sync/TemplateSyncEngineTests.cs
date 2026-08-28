@@ -13,13 +13,13 @@ namespace uCodeFirst.Tests.Sync;
 [TestFixture]
 public class TemplateSyncEngineTests
 {
-    private enum Templates
+    private static class Templates
     {
-        [Template(Alias: "_layout")]
-        Layout,
+        [Template]
+        public const string Layout = "_layout";
 
-        [Template(Alias: "page", Master = Layout)]
-        Page,
+        [Template(Master = Layout)]
+        public const string Page = "page";
     }
 
     private static IReadOnlyList<TemplateDefinition> Scan() =>

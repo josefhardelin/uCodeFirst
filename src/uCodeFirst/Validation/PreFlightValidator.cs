@@ -241,7 +241,7 @@ internal sealed class PreFlightValidator
 
             var rawMaster = def.Member.GetCustomAttribute<TemplateAttribute>()!.Master;
             if (rawMaster is not null && def.Master is null)
-                errors.Add($"[Template] on '{def.Member.DeclaringType?.FullName}.{def.Member.Name}' has Master '{rawMaster}' which is not a member of the same enum.");
+                errors.Add($"[Template] on '{def.Member.DeclaringType?.FullName}.{def.Member.Name}' has Master '{rawMaster}' which is not a const string field of the same class.");
             else if (def.Master is not null && !def.Master.IsDefined(typeof(TemplateAttribute)))
                 errors.Add($"[Template] on '{def.Member.DeclaringType?.FullName}.{def.Member.Name}' has Master '{def.Master.Name}' which has no [Template] attribute.");
         }

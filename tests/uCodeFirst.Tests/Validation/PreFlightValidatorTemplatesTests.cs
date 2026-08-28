@@ -7,39 +7,39 @@ namespace uCodeFirst.Tests.Validation;
 [TestFixture]
 public class PreFlightValidatorTemplatesTests
 {
-    private enum ValidTemplates
+    private static class ValidTemplates
     {
-        [Template(Alias: "_layout")]
-        Layout,
+        [Template]
+        public const string Layout = "_layout";
 
-        [Template(Alias: "page", Master = Layout)]
-        Page,
+        [Template(Master = Layout)]
+        public const string Page = "page";
     }
 
-    private enum CyclicTemplates
+    private static class CyclicTemplates
     {
-        [Template(Alias: "a", Master = B)]
-        A,
+        [Template(Master = B)]
+        public const string A = "a";
 
-        [Template(Alias: "b", Master = A)]
-        B,
+        [Template(Master = A)]
+        public const string B = "b";
     }
 
-    private enum SelfReferencingTemplate
+    private static class SelfReferencingTemplate
     {
-        [Template(Alias: "self", Master = Self)]
-        Self,
+        [Template(Master = Self)]
+        public const string Self = "self";
     }
 
-    private static IReadOnlyList<TemplateDefinition> Scan<TEnum>() where TEnum : struct, Enum =>
-        new DocumentTypeScanner().ScanTemplates(new[] { typeof(TEnum).Assembly });
+    private static IReadOnlyList<TemplateDefinition> Scan(Type containingType) =>
+        new DocumentTypeScanner().ScanTemplates(new[] { containingType.Assembly })
+            .Where(d => d.Member.DeclaringType == containingType)
+            .ToList();
 
     [Test]
     public void MasterChain_WithoutCycle_ProducesNoError()
     {
-        var definitions = Scan<ValidTemplates>()
-            .Where(d => d.Member.DeclaringType == typeof(ValidTemplates))
-            .ToList();
+        var definitions = Scan(typeof(ValidTemplates));
 
         var errors = new PreFlightValidator().Validate(
             Array.Empty<DocumentTypeDefinition>(),
@@ -51,9 +51,7 @@ public class PreFlightValidatorTemplatesTests
     [Test]
     public void MasterChain_WithCycle_ProducesError()
     {
-        var definitions = Scan<CyclicTemplates>()
-            .Where(d => d.Member.DeclaringType == typeof(CyclicTemplates))
-            .ToList();
+        var definitions = Scan(typeof(CyclicTemplates));
 
         var errors = new PreFlightValidator().Validate(
             Array.Empty<DocumentTypeDefinition>(),
@@ -65,9 +63,7 @@ public class PreFlightValidatorTemplatesTests
     [Test]
     public void MasterReferencingItself_ProducesCycleError()
     {
-        var definitions = Scan<SelfReferencingTemplate>()
-            .Where(d => d.Member.DeclaringType == typeof(SelfReferencingTemplate))
-            .ToList();
+        var definitions = Scan(typeof(SelfReferencingTemplate));
 
         var errors = new PreFlightValidator().Validate(
             Array.Empty<DocumentTypeDefinition>(),
