@@ -1,5 +1,7 @@
 # uCodeFirst
 
+[![NuGet](https://img.shields.io/nuget/v/Our.Umbraco.CodeFirst.svg)](https://www.nuget.org/packages/Our.Umbraco.CodeFirst)
+
 Code-first schema authoring for Umbraco 17+. Define document types as C# classes; the package syncs them into the Umbraco database on startup — no backoffice clicking, no generate step.
 
 ```csharp
